@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ratatoskr</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f8;
+        --panel: #ffffff;
+        --border: #dcdcde;
+        --text: #1f1f23;
+        --muted: #6b6b73;
+        /* Neutral by design: the only colour in the page is the red an error
+           earns. Buttons invert against the page instead of tinting it. */
+        --accent: #1f1f23;
+        --accent-fg: #ffffff;
+        --focus: #737380;
+        --danger: #b02a2a;
+        --radius: 6px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16161a;
+          --panel: #1d1d21;
+          --border: #35353b;
+          --text: #ececef;
+          --muted: #9a9aa3;
+          --accent: #ececef;
+          --accent-fg: #16161a;
+          --focus: #8a8a94;
+          --danger: #e06c6c;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.25rem 4rem;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 40rem; margin: 0 auto; }
+      /* With the administration panel in play there is a second column's worth of
+         content, so the page widens and the two sit side by side. */
+      main.wide { max-width: 66rem; }
+      @media (min-width: 62rem) {
+        main.wide {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 1rem;
+          align-items: start;
+        }
+        main.wide > * { grid-column: 1 / -1; }
+        main.wide > #account { grid-column: 1; }
+        main.wide > #admin { grid-column: 2; }
+        main.wide section { margin-bottom: 0; }
+      }
+      header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.25rem; }
+      header h1 { flex: 1; margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; }
+      h2 { margin: 0 0 1rem; font-size: 1.05rem; letter-spacing: -0.01em; }
+      h3 { margin: 0 0 0.35rem; font-size: 0.9rem; letter-spacing: -0.01em; }
+      /* Invites and accounts: one row each, actions pushed to the right. */
+      .rows { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+      .rows li {
+        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+        padding: 0.55rem 0;
+        border-top: 1px solid var(--border);
+        font-size: 0.9rem;
+      }
+      .rows li > .grow { flex: 1; min-width: 12rem; }
+      .rows button { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+      .rows .muted { font-size: 0.8rem; }
+      .empty { padding: 0.75rem 0; color: var(--muted); font-size: 0.85rem; }
+      .tag {
+        padding: 0.05rem 0.4rem; border-radius: 999px;
+        border: 1px solid var(--border); color: var(--muted);
+        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+      }
+      #invite-note { flex: 1; min-width: 10rem; margin-top: 0; }
+      .lede { margin: 0 0 2rem; color: var(--muted); }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+      }
+      label { display: block; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+      input[type="text"], input[type="email"], input[type="password"], input[type="file"] {
+        display: block;
+        width: 100%;
+        margin-top: 0.3rem;
+        padding: 0.5rem 0.65rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.9rem;
+      }
+      input[type="file"] { padding: 0.4rem 0.5rem; color: var(--muted); cursor: pointer; }
+      /* The default "Choose File" chrome is the ugliest control on the page and
+         the one browsers style least alike; make it look like our own button. */
+      input[type="file"]::file-selector-button {
+        margin-right: 0.65rem;
+        padding: 0.3rem 0.7rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      input[type="file"]::file-selector-button:hover { border-color: var(--muted); }
+      input[type="radio"] { accent-color: var(--text); }
+      input:focus-visible, select:focus-visible, button:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 1px;
+      }
+      button {
+        padding: 0.45rem 0.9rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        background: var(--accent);
+        color: var(--accent-fg);
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.12s, border-color 0.12s, opacity 0.12s;
+      }
+      button:hover { opacity: 0.85; }
+      button.secondary {
+        background: var(--panel);
+        border-color: var(--border);
+        color: var(--text);
+        opacity: 1;
+      }
+      button.secondary:hover { background: var(--bg); border-color: var(--muted); }
+      button.link {
+        background: none; border: none; padding: 0;
+        color: var(--text); font-size: 0.85rem; text-decoration: underline; cursor: pointer;
+        text-underline-offset: 2px;
+      }
+      button.link:hover { color: var(--muted); opacity: 1; }
+      select#lang {
+        padding: 0.3rem 0.4rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+      }
+      .row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+      .radios { display: flex; gap: 1rem; margin: 0.1rem 0 0.9rem; font-size: 0.9rem; }
+      .radios label { display: flex; align-items: center; gap: 0.35rem; margin: 0; color: var(--text); }
+      code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
+      .url {
+        display: flex; gap: 0.5rem; align-items: center;
+        padding: 0.5rem 0.7rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+      .url span { flex: 1; overflow-x: auto; white-space: nowrap; }
+      .preview { display: flex; gap: 1.25rem; align-items: flex-start; margin-bottom: 1.25rem; }
+      .preview img {
+        width: 128px; height: 128px;
+        image-rendering: pixelated;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        object-fit: contain;
+      }
+      .preview p { margin: 0 0 0.35rem; }
+      .muted { color: var(--muted); font-size: 0.85rem; }
+      .note {
+        margin-top: 0.5rem; padding: 0.6rem 0.7rem;
+        border-radius: var(--radius); font-size: 0.85rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--muted);
+      }
+      .note.error { color: var(--danger); border-left-color: var(--danger); }
+      .note.ok { color: var(--text); border-left-color: var(--text); }
+      [hidden] { display: none !important; }
+      hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Ratatoskr</h1>
+        <select id="lang" aria-label="Language">
+          <option value="en">English</option>
+          <option value="zh-CN">中文</option>
+        </select>
+      </header>
+      <p class="lede" data-i18n="tagline"></p>
+
+      <!-- Signed out -->
+      <section id="auth">
+        <h2 id="auth-title" data-i18n="signIn"></h2>
+
+        <form id="login-form">
+          <label>
+            <span data-i18n="emailOrCharacter"></span>
+            <input type="text" name="username" autocomplete="username" required />
+          </label>
+          <label>
+            <span data-i18n="password"></span>
+            <input type="password" name="password" autocomplete="current-password" required />
+          </label>
+          <div class="row">
+            <button type="submit" data-i18n="signIn"></button>
+            <button type="button" class="link" data-switch="register" data-i18n="toRegister"></button>
+          </div>
+        </form>
+
+        <form id="register-form" hidden>
+          <label>
+            <span data-i18n="email"></span>
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+          <label>
+            <span data-i18n="characterName"></span>
+            <input type="text" name="profileName" pattern="[A-Za-z0-9_]{3,16}" required />
+          </label>
+          <label>
+            <span data-i18n="inviteCode"></span>
+            <input type="text" name="inviteCode" required />
+          </label>
+          <p class="muted" data-i18n="passwordIsGenerated"></p>
+          <div class="row">
+            <button type="submit" data-i18n="register"></button>
+            <button type="button" class="link" data-switch="login" data-i18n="toSignIn"></button>
+          </div>
+        </form>
+
+        <div id="auth-note" class="note" hidden></div>
+      </section>
+
+      <!-- Shown once: after registration, or after an admin reissues a password.
+           Neither can be recovered afterwards, so the heading is set in place. -->
+      <section id="new-password" hidden>
+        <h2 id="password-title"></h2>
+        <div class="url">
+          <span id="password-value" class="mono"></span>
+          <button type="button" class="secondary" id="copy-password" data-i18n="copy"></button>
+        </div>
+        <p class="note error" data-i18n="passwordWarning"></p>
+        <button type="button" class="secondary" id="dismiss-password" data-i18n="passwordSaved"></button>
+      </section>
+
+      <!-- Signed in -->
+      <section id="account" hidden>
+        <h2 data-i18n="skinSection"></h2>
+        <div class="preview">
+          <img id="skin-preview" alt="" />
+          <div>
+            <p><strong id="profile-name" class="mono"></strong></p>
+            <p class="muted">UUID <span id="profile-id" class="mono"></span></p>
+            <p class="muted" id="skin-status"></p>
+          </div>
+        </div>
+
+        <form id="skin-form">
+          <label>
+            <span data-i18n="skinFile"></span>
+            <input type="file" name="file" accept="image/png" required />
+          </label>
+          <div class="radios">
+            <label><input type="radio" name="model" value="default" checked /> <span data-i18n="modelClassic"></span></label>
+            <label><input type="radio" name="model" value="slim" /> <span data-i18n="modelSlim"></span></label>
+          </div>
+          <div class="row">
+            <button type="submit" data-i18n="uploadSkin"></button>
+            <button type="button" class="secondary" id="delete-skin" data-i18n="deleteSkin"></button>
+          </div>
+        </form>
+
+        <hr />
+
+        <form id="cape-form">
+          <label>
+            <span data-i18n="capeFile"></span>
+            <input type="file" name="file" accept="image/png" required />
+          </label>
+          <div class="row">
+            <button type="submit" data-i18n="uploadCape"></button>
+            <button type="button" class="secondary" id="delete-cape" data-i18n="deleteCape"></button>
+          </div>
+        </form>
+
+        <div id="account-note" class="note" hidden></div>
+
+        <hr />
+
+        <h2 data-i18n="launcherSection"></h2>
+        <p class="muted" data-i18n="launcherHint"></p>
+        <div class="url">
+          <span id="yggdrasil-url" class="mono"></span>
+          <button type="button" class="secondary" id="copy-url" data-i18n="copy"></button>
+        </div>
+
+        <hr />
+        <button type="button" class="secondary" id="logout" data-i18n="signOut"></button>
+      </section>
+
+      <!-- Only rendered for an account with is_admin; the API is the real guard. -->
+      <section id="admin" hidden>
+        <h2 data-i18n="adminSection"></h2>
+
+        <h3 data-i18n="invitesHeading"></h3>
+        <p class="muted" data-i18n="invitesHint"></p>
+        <form id="mint-form" class="row">
+          <input type="text" name="note" id="invite-note" />
+          <button type="submit" data-i18n="mintInvite"></button>
+        </form>
+        <ul id="invite-list" class="rows"></ul>
+
+        <hr />
+
+        <h3 data-i18n="accountsHeading"></h3>
+        <ul id="account-list" class="rows"></ul>
+
+        <div id="admin-note" class="note" hidden></div>
+      </section>
+    </main>
+
+    <script type="module">
+      const YGGDRASIL = `${location.origin}/api/yggdrasil`;
+      const $ = (id) => document.getElementById(id);
+
+      /* ---------- i18n ----------
+       * No framework: every visible string carries a data-i18n key, and
+       * setLanguage() rewrites them in place. Keep both dictionaries in step.
+       */
+      const STRINGS = {
+        en: {
+          tagline: 'Yggdrasil authentication and skin service.',
+          signIn: 'Sign in',
+          register: 'Register',
+          email: 'Email address',
+          emailOrCharacter: 'Email address or character name',
+          password: 'Password',
+          characterName: 'Character name (3–16 characters: A–Z, 0–9, underscore)',
+          inviteCode: 'Invite code (single use)',
+          passwordIsGenerated: 'A password will be generated for you and shown once after registration.',
+          toRegister: 'Register an account',
+          toSignIn: 'Sign in instead',
+          yourPassword: 'Your password',
+          passwordWarning:
+            'Save this now. It is shown only once — the server stores a hash of it, not the password itself. If it is lost, an administrator must issue a new one.',
+          passwordSaved: 'I have saved it',
+          copy: 'Copy',
+          copied: 'Copied',
+          skinSection: 'Skin',
+          skinFile: 'Skin file (64×64 or 64×32 PNG)',
+          capeFile: 'Cape file (PNG)',
+          modelClassic: 'Classic (Steve)',
+          modelSlim: 'Slim (Alex)',
+          uploadSkin: 'Upload skin',
+          deleteSkin: 'Remove skin',
+          uploadCape: 'Upload cape',
+          deleteCape: 'Remove cape',
+          launcherSection: 'Launcher setup',
+          launcherHint:
+            'Add this address as an external authentication server in a launcher that supports authlib-injector:',
+          signOut: 'Sign out',
+          noSkin: 'No skin set.',
+          capeOnly: 'Cape set, no skin.',
+          skinSet: 'Skin set, {model} model.',
+          skinAndCapeSet: 'Skin set, {model} model. Cape set.',
+          skinUpdated: 'Skin updated.',
+          capeUpdated: 'Cape updated.',
+          skinDeleted: 'Skin removed.',
+          capeDeleted: 'Cape removed.',
+          sessionExpired: 'Your session has expired. Please sign in again.',
+          noCharacter: 'This account has no character.',
+          requestFailed: 'Request failed ({status}).',
+          adminSection: 'Administration',
+          invitesHeading: 'Invite codes',
+          invitesHint: 'Each code registers exactly one account. A note is optional, and only for your own records.',
+          inviteNotePlaceholder: 'Note — who is this for?',
+          mintInvite: 'Issue code',
+          noInvites: 'No invite codes yet.',
+          inviteUnused: 'unused',
+          inviteUsed: 'used {date}',
+          revoke: 'Revoke',
+          accountsHeading: 'Accounts',
+          noAccounts: 'No accounts.',
+          adminTag: 'admin',
+          registered: 'registered {date}',
+          resetPassword: 'Reset password',
+          deleteAccount: 'Delete',
+          confirmDelete: 'Delete {name} and their character permanently? This cannot be undone.',
+          confirmReset: 'Issue a new password for {name}? Their current password stops working and they are signed out everywhere.',
+          inviteIssued: 'Invite code issued.',
+          inviteRevoked: 'Invite code revoked.',
+          accountDeleted: 'Account deleted.',
+          passwordFor: 'New password for {name}',
+        },
+        'zh-CN': {
+          tagline: 'Yggdrasil 认证与皮肤服务。',
+          signIn: '登录',
+          register: '注册',
+          email: '邮箱地址',
+          emailOrCharacter: '邮箱地址或角色名',
+          password: '密码',
+          characterName: '角色名（3–16 位：字母、数字或下划线）',
+          inviteCode: '邀请码（一次性）',
+          passwordIsGenerated: '密码由服务器生成，注册完成后显示一次。',
+          toRegister: '注册账号',
+          toSignIn: '返回登录',
+          yourPassword: '你的密码',
+          passwordWarning:
+            '请立即保存。密码仅显示一次——服务器只存储其哈希值，不存储密码本身。密码遗失后需由管理员重新签发。',
+          passwordSaved: '已保存',
+          copy: '复制',
+          copied: '已复制',
+          skinSection: '皮肤',
+          skinFile: '皮肤文件（64×64 或 64×32 PNG）',
+          capeFile: '披风文件（PNG）',
+          modelClassic: '经典（Steve）',
+          modelSlim: '纤细（Alex）',
+          uploadSkin: '上传皮肤',
+          deleteSkin: '移除皮肤',
+          uploadCape: '上传披风',
+          deleteCape: '移除披风',
+          launcherSection: '启动器配置',
+          launcherHint: '在支持 authlib-injector 的启动器中，将下列地址添加为外置认证服务器：',
+          signOut: '退出登录',
+          noSkin: '未设置皮肤。',
+          capeOnly: '已设置披风，未设置皮肤。',
+          skinSet: '已设置皮肤，{model} 模型。',
+          skinAndCapeSet: '已设置皮肤，{model} 模型。已设置披风。',
+          skinUpdated: '皮肤已更新。',
+          capeUpdated: '披风已更新。',
+          skinDeleted: '皮肤已移除。',
+          capeDeleted: '披风已移除。',
+          sessionExpired: '登录已过期，请重新登录。',
+          noCharacter: '该账号没有角色。',
+          requestFailed: '请求失败（{status}）。',
+          adminSection: '管理',
+          invitesHeading: '邀请码',
+          invitesHint: '每个邀请码只能注册一个账号。备注是可选的，仅供你自己查阅。',
+          inviteNotePlaceholder: '备注 —— 这个码发给谁？',
+          mintInvite: '签发邀请码',
+          noInvites: '暂无邀请码。',
+          inviteUnused: '未使用',
+          inviteUsed: '已使用 {date}',
+          revoke: '撤销',
+          accountsHeading: '账号',
+          noAccounts: '暂无账号。',
+          adminTag: '管理员',
+          registered: '注册于 {date}',
+          resetPassword: '重置密码',
+          deleteAccount: '删除',
+          confirmDelete: '永久删除 {name} 及其角色？此操作不可撤销。',
+          confirmReset: '为 {name} 签发新密码？其当前密码将立即失效，且所有会话都会被登出。',
+          inviteIssued: '邀请码已签发。',
+          inviteRevoked: '邀请码已撤销。',
+          accountDeleted: '账号已删除。',
+          passwordFor: '{name} 的新密码',
+        },
+      };
+
+      let lang = localStorage.getItem('ratatoskr-lang');
+      if (!STRINGS[lang]) lang = navigator.language?.startsWith('zh') ? 'zh-CN' : 'en';
+
+      const t = (key, params = {}) =>
+        String(STRINGS[lang][key] ?? key).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? '');
+
+      function setLanguage(next) {
+        lang = next;
+        localStorage.setItem('ratatoskr-lang', next);
+        document.documentElement.lang = next;
+        $('lang').value = next;
+        for (const el of document.querySelectorAll('[data-i18n]')) {
+          el.textContent = t(el.dataset.i18n);
+        }
+        $('invite-note').placeholder = t('inviteNotePlaceholder');
+        render();
+      }
+
+      $('lang').addEventListener('change', (event) => setLanguage(event.target.value));
+
+      /* ---------- session ---------- */
+
+      const session = {
+        get() {
+          try { return JSON.parse(localStorage.getItem('ratatoskr') ?? 'null'); } catch { return null; }
+        },
+        set(value) { localStorage.setItem('ratatoskr', JSON.stringify(value)); },
+        clear() { localStorage.removeItem('ratatoskr'); },
+      };
+
+      function note(el, message, kind) {
+        el.textContent = message;
+        el.className = `note ${kind}`;
+        el.hidden = !message;
+      }
+
+      // Yggdrasil errors come back as {error, errorMessage}, and so do ours.
+      // Those messages are protocol-facing and always English.
+      async function post(url, body) {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (response.status === 204) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.errorMessage ?? t('requestFailed', { status: response.status }));
+        }
+        return data;
+      }
+
+      async function texture(method, type, form) {
+        const { accessToken, profile } = session.get();
+        const response = await fetch(`${YGGDRASIL}/api/user/profile/${profile.id}/${type}`, {
+          method,
+          headers: { authorization: `Bearer ${accessToken}` },
+          body: form,
+        });
+        if (response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.errorMessage ?? t('requestFailed', { status: response.status }));
+      }
+
+      /* ---------- rendering ---------- */
+
+      // The password is shown exactly once -- on registration, or when an admin
+      // reissues one -- because the server keeps only its hash.
+      function showPassword(title, password) {
+        $('password-title').textContent = title;
+        $('password-value').textContent = password;
+        $('new-password').hidden = false;
+      }
+
+      async function render() {
+        const current = session.get();
+        $('auth').hidden = !!current;
+        $('account').hidden = !current;
+        await renderAdmin();
+        if (!current) return;
+
+        $('profile-name').textContent = current.profile.name;
+        $('profile-id').textContent = current.profile.id;
+        $('yggdrasil-url').textContent = YGGDRASIL;
+
+        // Read the skin back from the public profile endpoint: the same data the
+        // game sees, so the preview cannot drift from what is served in-game.
+        const response = await fetch(
+          `${YGGDRASIL}/sessionserver/session/minecraft/profile/${current.profile.id}`,
+        );
+        const preview = $('skin-preview');
+        if (response.status !== 200) {
+          preview.removeAttribute('src');
+          $('skin-status').textContent = t('noSkin');
+          return;
+        }
+
+        const profile = await response.json();
+        const property = profile.properties?.find((p) => p.name === 'textures');
+        const textures = property ? JSON.parse(atob(property.value)).textures : {};
+
+        if (textures.SKIN) {
+          preview.src = textures.SKIN.url;
+          const model = t(textures.SKIN.metadata?.model === 'slim' ? 'modelSlim' : 'modelClassic');
+          $('skin-status').textContent = t(textures.CAPE ? 'skinAndCapeSet' : 'skinSet', { model });
+        } else {
+          preview.removeAttribute('src');
+          $('skin-status').textContent = t(textures.CAPE ? 'capeOnly' : 'noSkin');
+        }
+      }
+
+      /* ---------- authentication ---------- */
+
+      for (const button of document.querySelectorAll('[data-switch]')) {
+        button.addEventListener('click', () => {
+          const toRegister = button.dataset.switch === 'register';
+          $('login-form').hidden = toRegister;
+          $('register-form').hidden = !toRegister;
+          $('auth-title').textContent = t(toRegister ? 'register' : 'signIn');
+          note($('auth-note'), '', '');
+        });
+      }
+
+      $('login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          const data = await post(`${YGGDRASIL}/authserver/authenticate`, {
+            username: form.get('username'),
+            password: form.get('password'),
+            agent: { name: 'Minecraft', version: 1 },
+          });
+          if (!data.selectedProfile) throw new Error(t('noCharacter'));
+          session.set({
+            accessToken: data.accessToken,
+            clientToken: data.clientToken,
+            profile: data.selectedProfile,
+          });
+          event.target.reset();
+          await render();
+        } catch (error) {
+          note($('auth-note'), error.message, 'error');
+        }
+      });
+
+      $('register-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        try {
+          // The password is generated server-side and never shown again.
+          const { password } = await post('/api/register', Object.fromEntries(form));
+          const data = await post(`${YGGDRASIL}/authserver/authenticate`, {
+            username: form.get('email'),
+            password,
+            agent: { name: 'Minecraft', version: 1 },
+          });
+          session.set({
+            accessToken: data.accessToken,
+            clientToken: data.clientToken,
+            profile: data.selectedProfile,
+          });
+          event.target.reset();
+          showPassword(t('yourPassword'), password);
+          await render();
+        } catch (error) {
+          note($('auth-note'), error.message, 'error');
+        }
+      });
+
+      $('logout').addEventListener('click', async () => {
+        const current = session.get();
+        session.clear();
+        await render();
+        if (current) {
+          post(`${YGGDRASIL}/authserver/invalidate`, {
+            accessToken: current.accessToken,
+            clientToken: current.clientToken,
+          }).catch(() => {});
+        }
+      });
+
+      /* ---------- textures ---------- */
+
+      async function withNote(action, successKey) {
+        try {
+          await action();
+          note($('account-note'), t(successKey), 'ok');
+          await render();
+        } catch (error) {
+          // An expired token is the one failure worth handling specially.
+          if (error.message === 'Invalid token.') {
+            session.clear();
+            await render();
+            note($('auth-note'), t('sessionExpired'), 'error');
+            return;
+          }
+          note($('account-note'), error.message, 'error');
+        }
+      }
+
+      $('skin-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        withNote(() => texture('PUT', 'skin', form), 'skinUpdated');
+      });
+
+      $('cape-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const form = new FormData(event.target);
+        withNote(() => texture('PUT', 'cape', form), 'capeUpdated');
+      });
+
+      $('delete-skin').addEventListener('click', () =>
+        withNote(() => texture('DELETE', 'skin'), 'skinDeleted'),
+      );
+      $('delete-cape').addEventListener('click', () =>
+        withNote(() => texture('DELETE', 'cape'), 'capeDeleted'),
+      );
+
+      /* ---------- clipboard ---------- */
+
+      for (const [id, source] of [['copy-url', 'yggdrasil-url'], ['copy-password', 'password-value']]) {
+        $(id).addEventListener('click', async () => {
+          await navigator.clipboard.writeText($(source).textContent);
+          $(id).textContent = t('copied');
+          setTimeout(() => ($(id).textContent = t('copy')), 1500);
+        });
+      }
+
+      $('dismiss-password').addEventListener('click', () => {
+        $('password-value').textContent = '';
+        $('new-password').hidden = true;
+      });
+
+      /* ---------- administration ----------
+       * Shown only to an account the API answers /admin/state for. Hiding the
+       * section is a courtesy; the token check on the server is the real guard.
+       */
+
+      async function adminRequest(method, path, body) {
+        const current = session.get();
+        if (!current) return null;
+        const response = await fetch(`/api/admin${path}`, {
+          method,
+          headers: {
+            authorization: `Bearer ${current.accessToken}`,
+            ...(body ? { 'content-type': 'application/json' } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        if (response.status === 403) return null; // not an admin, or the token died
+        if (response.status === 204) return {};
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.errorMessage ?? t('requestFailed', { status: response.status }));
+        }
+        return data;
+      }
+
+      const day = (ms) => new Date(ms).toLocaleDateString(lang);
+
+      function row(...children) {
+        const li = document.createElement('li');
+        li.append(...children);
+        return li;
+      }
+
+      function span(text, className) {
+        const el = document.createElement('span');
+        el.textContent = text;
+        if (className) el.className = className;
+        return el;
+      }
+
+      function action(labelKey, onClick, className = 'secondary') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = className;
+        button.textContent = t(labelKey);
+        button.addEventListener('click', onClick);
+        return button;
+      }
+
+      function empty(key) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = t(key);
+        return li;
+      }
+
+      async function renderAdmin() {
+        const state = await adminRequest('GET', '/state').catch(() => null);
+        $('admin').hidden = !state;
+        // Two columns only when there is a second column to show.
+        document.querySelector('main').classList.toggle('wide', !!state);
+        if (!state) return;
+
+        const invites = state.invites.map((invite) =>
+          row(
+            span(invite.code, 'mono grow'),
+            invite.note ? span(invite.note, 'muted') : '',
+            span(
+              invite.used_at ? t('inviteUsed', { date: day(invite.used_at) }) : t('inviteUnused'),
+              'tag',
+            ),
+            ...(invite.used_at
+              ? []
+              : [
+                  action('copy', async (event) => {
+                    await navigator.clipboard.writeText(invite.code);
+                    event.target.textContent = t('copied');
+                  }),
+                  action('revoke', () =>
+                    adminAction(() => adminRequest('DELETE', `/invites/${invite.code}`), 'inviteRevoked'),
+                  ),
+                ]),
+          ),
+        );
+        $('invite-list').replaceChildren(...(invites.length ? invites : [empty('noInvites')]));
+
+        const accounts = state.accounts.map((account) => {
+          const details = document.createElement('div');
+          details.className = 'grow';
+          const name = document.createElement('p');
+          name.append(Object.assign(document.createElement('strong'), {
+            textContent: account.profile_name ?? '—',
+            className: 'mono',
+          }));
+          if (account.is_admin) name.append(' ', span(t('adminTag'), 'tag'));
+          const meta = span(
+            `${account.email} · ${t('registered', { date: day(account.created_at) })}`,
+            'muted',
+          );
+          details.append(name, meta);
+
+          const label = account.profile_name ?? account.email;
+          return row(
+            details,
+            action('resetPassword', async () => {
+              if (!confirm(t('confirmReset', { name: label }))) return;
+              await adminAction(async () => {
+                const { password } = await adminRequest('POST', `/accounts/${account.id}/password`);
+                showPassword(t('passwordFor', { name: label }), password);
+                // Resetting your own password invalidates the token you are
+                // holding, so the reload that follows would sign you out.
+                if (account.id === state.self) session.clear();
+              });
+            }),
+            // The API refuses this anyway; not offering it is just tidier.
+            ...(account.id === state.self
+              ? []
+              : [
+                  action('deleteAccount', async () => {
+                    if (!confirm(t('confirmDelete', { name: label }))) return;
+                    await adminAction(
+                      () => adminRequest('DELETE', `/accounts/${account.id}`),
+                      'accountDeleted',
+                    );
+                  }),
+                ]),
+          );
+        });
+        $('account-list').replaceChildren(...(accounts.length ? accounts : [empty('noAccounts')]));
+      }
+
+      /** Runs an admin mutation, reports it, and redraws the lists. */
+      async function adminAction(mutate, successKey) {
+        try {
+          await mutate();
+          note($('admin-note'), successKey ? t(successKey) : '', successKey ? 'ok' : '');
+          await render();
+        } catch (error) {
+          note($('admin-note'), error.message, 'error');
+        }
+      }
+
+      $('mint-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const inviteNote = $('invite-note').value.trim();
+        adminAction(async () => {
+          await adminRequest('POST', '/invites', inviteNote ? { note: inviteNote } : {});
+          $('invite-note').value = '';
+        }, 'inviteIssued');
+      });
+
+      setLanguage(lang);
+    </script>
+  </body>
+</html>

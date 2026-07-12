@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ratatoskr",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-15",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "none"
+  },
+
+  "vars": {
+    // Shown to users in the authlib-injector metadata.
+    "SERVER_NAME": "Ratatoskr",
+    // Public origin of this service, e.g. "https://skin.example.com".
+    // Leave empty to derive it from the incoming request URL.
+    "PUBLIC_URL": "",
+    // Hosts allowed to serve textures. Must include this service's own host.
+    "SKIN_DOMAINS": ""
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ratatoskr",
+      "database_id": "REPLACE_ME",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "REPLACE_ME"
+    }
+  ]
+
+  // Secret (set with `wrangler secret put`, or let `npm run setup` do it):
+  //   SIGNING_KEY    RSA private key, PKCS#8 PEM. Signs texture properties.
+  //
+  // Invite codes are not a secret: they live in the database, one per
+  // registration. See `npm run invite`.
+}

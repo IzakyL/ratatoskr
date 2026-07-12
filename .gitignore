@@ -1,0 +1,9 @@
+node_modules/
+.wrangler/
+
+# Local secrets: the RSA signing key and the invite code.
+.dev.vars
+
+# The README tells you to run `npm run keygen > key.pem`. Never commit one.
+*.pem
+*.key
