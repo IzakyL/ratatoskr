@@ -142,8 +142,7 @@ Yggdrasil 命名空间之外：
 添加时会校验一次地址。一个都没有（默认）即关闭桥接模式。
 
 标识会与该来源的每个玩家一起记录，所以不能修改；移除一个来源会同时删除它的玩家记录，释放
-他们的角色名。（旧版本从 `BRIDGE_UPSTREAMS` 变量读取上游，现在已不再读取，升级后请在后台
-重新添加。）
+他们的角色名。
 
 Minecraft 服务端无需任何改动，仍以
 `-javaagent:authlib-injector.jar=https://<your-worker-url>/api/yggdrasil` 启动；玩家也无需

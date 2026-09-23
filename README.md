@@ -160,8 +160,7 @@ once when it is added. With no upstreams, the default, bridge mode is off.
 
 The label is stored against every player the upstream vouched for, which is why it
 cannot be edited: removing an upstream forgets its players too, releasing their
-names. (Earlier versions read upstreams from a `BRIDGE_UPSTREAMS` variable; that is
-no longer read, so add them again in the view after upgrading.)
+names.
 
 Nothing changes for the Minecraft server — it is still started with
 `-javaagent:authlib-injector.jar=https://<your-worker-url>/api/yggdrasil` — or for

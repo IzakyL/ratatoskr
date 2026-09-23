@@ -18,7 +18,6 @@
     "PUBLIC_URL": "",
     // Hosts allowed to serve textures. Must include this service's own host.
     "SKIN_DOMAINS": ""
-    // Bridge mode's upstreams are no longer set here: add them in the admin view.
   },
 
   "d1_databases": [

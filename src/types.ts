@@ -39,7 +39,7 @@ export interface Profile {
   created_at: number;
 }
 
-/** A player from another Yggdrasil service; see migrations/0004_bridge.sql. */
+/** A player from another Yggdrasil service; see migrations/0001_init.sql. */
 export interface BridgedProfile {
   id: string;
   source: string;
@@ -49,7 +49,7 @@ export interface BridgedProfile {
   last_seen: number;
 }
 
-/** Another Yggdrasil service whose players may join; see migrations/0005_bridge_upstreams.sql. */
+/** Another Yggdrasil service whose players may join; see migrations/0001_init.sql. */
 export interface BridgeUpstream {
   label: string;
   api_root: string | null;
