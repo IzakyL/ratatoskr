@@ -6,7 +6,9 @@ import {
   findUserById,
   findValidToken,
   listAccounts,
+  listBridged,
   listInvites,
+  releaseBridged,
   replacePassword,
   revokeInvite,
 } from '../lib/db';
@@ -48,8 +50,12 @@ admin.use('*', async (c, next) => {
 
 /** Everything the admin view renders, in one request. */
 admin.get('/state', async (c) => {
-  const [accounts, invites] = await Promise.all([listAccounts(c.env), listInvites(c.env)]);
-  return c.json({ self: c.get('admin').id, accounts, invites });
+  const [accounts, invites, bridged] = await Promise.all([
+    listAccounts(c.env),
+    listInvites(c.env),
+    listBridged(c.env),
+  ]);
+  return c.json({ self: c.get('admin').id, accounts, invites, bridged });
 });
 
 admin.post('/invites', async (c) => {
@@ -89,6 +95,17 @@ admin.delete('/accounts/:id', async (c) => {
   if (!user) throw badRequest('No such account.');
 
   await deleteAccount(c.env, id);
+  return c.body(null, 204);
+});
+
+/**
+ * Forgets a bridged player, which frees their name for anyone -- including the
+ * same player, who is simply recorded again on their next join.
+ */
+admin.delete('/bridged/:id', async (c) => {
+  if (!(await releaseBridged(c.env, accountId(c.req.param('id'))))) {
+    throw badRequest('No such bridged player.');
+  }
   return c.body(null, 204);
 });
 

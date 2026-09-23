@@ -1,6 +1,12 @@
 import { Hono } from 'hono';
 import { generatePassword, hashPassword } from '../lib/crypto';
-import { claimInvite, findProfileByName, findUserByEmail, releaseInvite } from '../lib/db';
+import {
+  claimInvite,
+  findBridgedByName,
+  findProfileByName,
+  findUserByEmail,
+  releaseInvite,
+} from '../lib/db';
 import { badRequest, forbidden } from '../lib/errors';
 import { minimalProfile } from '../lib/profile';
 import { randomUuid } from '../lib/uuid';
@@ -39,7 +45,12 @@ account.post('/register', async (c) => {
   }
 
   if (await findUserByEmail(c.env, email)) throw badRequest('That email is already registered.');
-  if (await findProfileByName(c.env, profileName)) throw badRequest('That character name is taken.');
+  // A bridged player's name is taken just the same. This check is not atomic
+  // with the INSERT below, but the window is one registration wide and
+  // hasJoined refuses a bridged player whose name has a local character.
+  if ((await findProfileByName(c.env, profileName)) || (await findBridgedByName(c.env, profileName))) {
+    throw badRequest('That character name is taken.');
+  }
 
   const now = Date.now();
   const userId = randomUuid();

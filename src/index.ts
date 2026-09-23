@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { upstreamSkinDomains } from './lib/bridge';
 import { publicKeyPem } from './lib/crypto';
 import { YggdrasilError } from './lib/errors';
 import { publicOrigin } from './lib/profile';
@@ -31,6 +32,10 @@ app.get(YGGDRASIL_PREFIX, async (c) => {
   // Clients refuse skin URLs from hosts they were not told about, so our own
   // host has to be on the list no matter what.
   if (!skinDomains.includes(host)) skinDomains.unshift(host);
+  // In bridge mode our players also see skins hosted by the upstreams.
+  for (const domain of await upstreamSkinDomains(c.env)) {
+    if (!skinDomains.includes(domain)) skinDomains.push(domain);
+  }
 
   return c.json({
     meta: {

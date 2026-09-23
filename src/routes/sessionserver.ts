@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { findProfileById, findValidToken } from '../lib/db';
+import { bridgeHasJoined, bridgeProfile } from '../lib/bridge';
+import { findBridgedById, findProfileById, findValidToken } from '../lib/db';
 import { badRequest, forbidden, invalidToken } from '../lib/errors';
 import { fullProfile, publicOrigin } from '../lib/profile';
 import { dash, isUuid, undash } from '../lib/uuid';
@@ -66,7 +67,11 @@ sessionserver.get('/session/minecraft/hasJoined', async (c) => {
   if (!username || !serverId) return c.body(null, 204);
 
   const raw = await c.env.KV.get(joinKey(serverId));
-  if (!raw) return c.body(null, 204);
+  if (!raw) {
+    // Not one of ours; in bridge mode, perhaps one of an upstream's.
+    const bridged = await bridgeHasJoined(c.env, username, serverId, ip);
+    return bridged ? c.json(bridged) : c.body(null, 204);
+  }
 
   const record = JSON.parse(raw) as JoinRecord;
   if (record.name.toLowerCase() !== username.toLowerCase()) return c.body(null, 204);
@@ -88,10 +93,15 @@ sessionserver.get('/session/minecraft/profile/:uuid', async (c) => {
   const uuid = c.req.param('uuid');
   if (!isUuid(uuid)) return c.body(null, 204);
 
-  const profile = await findProfileById(c.env, dash(uuid));
-  if (!profile) return c.body(null, 204);
-
   const signed = c.req.query('unsigned') === 'false';
+
+  const profile = await findProfileById(c.env, dash(uuid));
+  if (!profile) {
+    const bridged = await findBridgedById(c.env, dash(uuid));
+    const upstream = bridged && (await bridgeProfile(c.env, bridged, signed));
+    return upstream ? c.json(upstream) : c.body(null, 204);
+  }
+
   return c.json(
     await fullProfile(c.env, profile, publicOrigin(c.env, c.req.url), signed, Date.now()),
   );

@@ -330,6 +330,14 @@
         <h3 data-i18n="accountsHeading"></h3>
         <ul id="account-list" class="rows"></ul>
 
+        <!-- Bridge mode only: players who signed in with another service. -->
+        <div id="bridged" hidden>
+          <hr />
+          <h3 data-i18n="bridgedHeading"></h3>
+          <p class="muted" data-i18n="bridgedHint"></p>
+          <ul id="bridged-list" class="rows"></ul>
+        </div>
+
         <div id="admin-note" class="note" hidden></div>
       </section>
     </main>
@@ -406,6 +414,12 @@
           inviteRevoked: 'Invite code revoked.',
           accountDeleted: 'Account deleted.',
           passwordFor: 'New password for {name}',
+          bridgedHeading: 'Bridged players',
+          bridgedHint: 'Players who signed in with another service. Each name belongs to the first player who joined with it; release it to let someone else take it.',
+          lastSeen: 'last seen {date}',
+          release: 'Release name',
+          confirmRelease: 'Release the name {name}? The next player to join with it, from any service, will hold it.',
+          bridgedReleased: 'Name released.',
         },
         'zh-CN': {
           tagline: 'Yggdrasil 认证与皮肤服务。',
@@ -469,6 +483,12 @@
           inviteRevoked: '邀请码已撤销。',
           accountDeleted: '账号已删除。',
           passwordFor: '{name} 的新密码',
+          bridgedHeading: '桥接玩家',
+          bridgedHint: '通过其他验证服务登录的玩家。每个名字归第一个用它进服的玩家所有；释放后其他人才能使用。',
+          lastSeen: '最近登录 {date}',
+          release: '释放名字',
+          confirmRelease: '释放名字 {name}？之后第一个用这个名字进服的玩家（无论来自哪个服务）将获得它。',
+          bridgedReleased: '名字已释放。',
         },
       };
 
@@ -835,6 +855,36 @@
           );
         });
         $('account-list').replaceChildren(...(accounts.length ? accounts : [empty('noAccounts')]));
+
+        const bridged = state.bridged ?? [];
+        $('bridged').hidden = bridged.length === 0;
+        $('bridged-list').replaceChildren(
+          ...bridged.map((player) => {
+            const details = document.createElement('div');
+            details.className = 'grow';
+            const name = document.createElement('p');
+            name.append(
+              Object.assign(document.createElement('strong'), {
+                textContent: player.name,
+                className: 'mono',
+              }),
+              ' ',
+              span(player.source, 'tag'),
+            );
+            details.append(name, span(t('lastSeen', { date: day(player.last_seen) }), 'muted'));
+
+            return row(
+              details,
+              action('release', async () => {
+                if (!confirm(t('confirmRelease', { name: player.name }))) return;
+                await adminAction(
+                  () => adminRequest('DELETE', `/bridged/${player.id}`),
+                  'bridgedReleased',
+                );
+              }),
+            );
+          }),
+        );
       }
 
       /** Runs an admin mutation, reports it, and redraws the lists. */

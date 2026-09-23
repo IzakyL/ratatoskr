@@ -1,4 +1,4 @@
-import type { Account, Env, Invite, Profile, Token, User } from '../types';
+import type { Account, BridgedProfile, Env, Invite, Profile, Token, User } from '../types';
 
 export const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -194,4 +194,82 @@ export async function deleteToken(env: Env, accessToken: string): Promise<void> 
 
 export async function deleteTokensForUser(env: Env, userId: string): Promise<void> {
   await env.DB.prepare('DELETE FROM tokens WHERE user_id = ?').bind(userId).run();
+}
+
+/* ---------------- bridge mode ---------------- */
+
+export function findBridgedById(env: Env, id: string): Promise<BridgedProfile | null> {
+  return env.DB.prepare('SELECT * FROM bridged_profiles WHERE id = ?').bind(id).first<BridgedProfile>();
+}
+
+export function findBridgedByName(env: Env, name: string): Promise<BridgedProfile | null> {
+  return env.DB.prepare('SELECT * FROM bridged_profiles WHERE name_lower = ?')
+    .bind(name.toLowerCase())
+    .first<BridgedProfile>();
+}
+
+export async function findBridgedByNames(env: Env, names: string[]): Promise<BridgedProfile[]> {
+  if (names.length === 0) return [];
+  const placeholders = names.map(() => '?').join(',');
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM bridged_profiles WHERE name_lower IN (${placeholders})`,
+  )
+    .bind(...names.map((name) => name.toLowerCase()))
+    .all<BridgedProfile>();
+  return results;
+}
+
+export async function listBridged(env: Env): Promise<BridgedProfile[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM bridged_profiles ORDER BY last_seen DESC',
+  ).all<BridgedProfile>();
+  return results;
+}
+
+/**
+ * Records a bridged player, or refreshes one already on record. Returns false
+ * when the name or the uuid is held by someone else.
+ *
+ * As with invites, the UNIQUE constraints settle races: the reads before the
+ * write only decide which write to attempt.
+ */
+export async function claimBridged(
+  env: Env,
+  source: string,
+  id: string,
+  name: string,
+  now: number,
+): Promise<boolean> {
+  const byName = await findBridgedByName(env, name);
+  if (byName && (byName.id !== id || byName.source !== source)) return false;
+
+  const byId = byName ?? (await findBridgedById(env, id));
+  // The same uuid arriving from a different service is not the same player.
+  if (byId && byId.source !== source) return false;
+
+  try {
+    if (byId) {
+      // Covers both a returning player and one who renamed upstream.
+      await env.DB.prepare(
+        'UPDATE bridged_profiles SET name = ?, name_lower = ?, last_seen = ? WHERE id = ?',
+      )
+        .bind(name, name.toLowerCase(), now, id)
+        .run();
+    } else {
+      await env.DB.prepare(
+        'INSERT INTO bridged_profiles (id, source, name, name_lower, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+        .bind(id, source, name, name.toLowerCase(), now, now)
+        .run();
+    }
+  } catch (error) {
+    if (String(error).includes('UNIQUE')) return false;
+    throw error;
+  }
+  return true;
+}
+
+export async function releaseBridged(env: Env, id: string): Promise<boolean> {
+  const { meta } = await env.DB.prepare('DELETE FROM bridged_profiles WHERE id = ?').bind(id).run();
+  return meta.changes === 1;
 }

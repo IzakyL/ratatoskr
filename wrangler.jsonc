@@ -17,7 +17,12 @@
     // Leave empty to derive it from the incoming request URL.
     "PUBLIC_URL": "",
     // Hosts allowed to serve textures. Must include this service's own host.
-    "SKIN_DOMAINS": ""
+    "SKIN_DOMAINS": "",
+    // Bridge mode: other Yggdrasil services whose players may also join, tried
+    // in order. "mojang" for the official service, "label=api-root" for any
+    // authlib-injector one, e.g. "mojang, littleskin=https://littleskin.cn/api/yggdrasil".
+    // Empty turns bridge mode off.
+    "BRIDGE_UPSTREAMS": ""
   },
 
   "d1_databases": [

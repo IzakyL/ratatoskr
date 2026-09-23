@@ -5,6 +5,7 @@ export interface Env {
   SERVER_NAME: string;
   PUBLIC_URL: string;
   SKIN_DOMAINS: string;
+  BRIDGE_UPSTREAMS: string;
 
   SIGNING_KEY: string;
 }
@@ -37,6 +38,16 @@ export interface Profile {
   skin_model: 'default' | 'slim';
   cape_hash: string | null;
   created_at: number;
+}
+
+/** A player from another Yggdrasil service; see migrations/0004_bridge.sql. */
+export interface BridgedProfile {
+  id: string;
+  source: string;
+  name: string;
+  name_lower: string;
+  first_seen: number;
+  last_seen: number;
 }
 
 export interface Invite {

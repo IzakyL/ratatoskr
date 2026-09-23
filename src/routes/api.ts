@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { sha256Hex } from '../lib/crypto';
-import { findProfileById, findProfilesByNames, findValidToken } from '../lib/db';
+import { findBridgedByNames, findProfileById, findProfilesByNames, findValidToken } from '../lib/db';
 import { badRequest, forbidden, invalidToken } from '../lib/errors';
 import { isValidCapeSize, isValidSkinSize, readPngSize } from '../lib/png';
 import { minimalProfile } from '../lib/profile';
-import { dash, isUuid } from '../lib/uuid';
+import { dash, isUuid, undash } from '../lib/uuid';
 import type { Env } from '../types';
 
 const MAX_TEXTURE_BYTES = 512 * 1024;
@@ -24,8 +24,16 @@ api.post('/profiles/minecraft', async (c) => {
     throw badRequest(`at most ${MAX_NAME_LOOKUP} names per request`);
   }
 
-  const profiles = await findProfilesByNames(c.env, names as string[]);
-  return c.json(profiles.map(minimalProfile));
+  // Bridged players are included so that whitelists and bans work for them
+  // too; only those who have joined at least once are known here.
+  const [profiles, bridged] = await Promise.all([
+    findProfilesByNames(c.env, names as string[]),
+    findBridgedByNames(c.env, names as string[]),
+  ]);
+  return c.json([
+    ...profiles.map(minimalProfile),
+    ...bridged.map((player) => ({ id: undash(player.id), name: player.name })),
+  ]);
 });
 
 /**

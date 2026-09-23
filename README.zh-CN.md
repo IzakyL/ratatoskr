@@ -11,6 +11,8 @@
   签名，这是协议的强制要求。
 - 密码由服务器生成，用户不可自选，详见[密码](#密码)。
 - 注册需要一次性邀请码，详见[邀请码](#邀请码)。
+- 可选的[桥接模式](#桥接模式)：来自 Mojang 正版、LittleSkin 或其他 Yggdrasil 服务的玩家
+  可以进入同一个 Minecraft 服务器，名字在各服务之间受到保护。
 - 附带一个用于注册、登录与皮肤管理的网页界面，支持中英文。第一个账号即管理员，可在其中
   看到[管理视图](#管理)。
 
@@ -108,11 +110,12 @@ Yggdrasil 命名空间之外：
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | `/api/admin/state` | 一次性返回全部账号与全部邀请码 |
+| GET | `/api/admin/state` | 一次性返回全部账号、邀请码与桥接玩家 |
 | POST | `/api/admin/invites` | 签发邀请码，`{ count?, note? }`，单次最多 20 个 |
 | DELETE | `/api/admin/invites/{code}` | 撤销一个未使用的邀请码 |
 | POST | `/api/admin/accounts/{uuid}/password` | 签发新密码（仅返回一次），并登出该账号 |
 | DELETE | `/api/admin/accounts/{uuid}` | 删除账号及其角色 |
+| DELETE | `/api/admin/bridged/{uuid}` | 移除一个桥接玩家的记录，释放其名字 |
 
 ## 配置
 
@@ -123,8 +126,53 @@ Yggdrasil 命名空间之外：
 | `SERVER_NAME` | `Ratatoskr` | 元数据文档中显示的服务名 |
 | `PUBLIC_URL` | 空 | 对外地址。留空时从请求推断，通常无需填写 |
 | `SKIN_DOMAINS` | 空 | 允许提供材质的额外主机名，以逗号分隔。本服务自身的主机名始终包含在内 |
+| `BRIDGE_UPSTREAMS` | 空 | 允许其玩家进服的其他验证服务，详见[桥接模式](#桥接模式) |
 
 只有一个 secret，由 `setup` 设置：`SIGNING_KEY`，即 PKCS#8 PEM 格式的 RSA 私钥。
+
+## 桥接模式
+
+一个 Minecraft 服务端的 authlib-injector 只能指向一个验证服务。桥接模式让它指向本服务的同时，
+玩家仍可使用自己在别处已有的账号——Mojang 正版、LittleSkin，或任何兼容 authlib-injector 的
+服务：
+
+```jsonc
+"vars": { "BRIDGE_UPSTREAMS": "mojang, littleskin=https://littleskin.cn/api/yggdrasil" }
+```
+
+各项以逗号分隔：`mojang` 表示正版服务，其他服务写作 `标签=API 地址`，API 地址即填入启动器的
+那个地址。标签会与该上游担保过的每个玩家一起记录，因此地址变更时请保持标签不变。留空（默认）
+即关闭桥接模式。
+
+Minecraft 服务端无需任何改动，仍以
+`-javaagent:authlib-injector.jar=https://<your-worker-url>/api/yggdrasil` 启动；玩家也无需
+改动，照常用自己的启动器和账号登录即可。
+
+工作方式：`hasJoined` 找不到本服务的进服记录时，会同时向所有上游提出同样的查询，并原样返回
+认出该玩家的那个上游给出的角色（包括签名）。
+
+**名字受到保护。** 名字归第一个用它进服的人所有：
+
+- 在本服务注册的角色始终保有其名字，任何桥接玩家都不能以此名进服。
+- 除此之外，第一个以某名字进服的桥接玩家（按上游与 UUID 识别）获得该名字。此后来自其他上游
+  或其他 UUID 的同名玩家都会被拒绝，在本服务注册该名字也会被拒绝。玩家在上游改名后，其记录会
+  随之转到新名字。
+- 管理员可以在管理视图的**桥接玩家**中释放名字，或调用 `DELETE /api/admin/bridged/{uuid}`。
+
+桥接玩家同样可以通过 `/api/profiles/minecraft` 与
+`/sessionserver/session/minecraft/profile/{uuid}` 查到，因此白名单和封禁对他们同样有效，
+但前提是他们至少进过一次服。
+
+注意事项：
+
+- **聊天签名。** 在 Minecraft 1.19.3 及以上版本，客户端会带上由其自身验证服务签发的聊天密钥，
+  服务端用它信任的密钥（Mojang 的与本服务的）校验。上游若自行签发密钥（LittleSkin 就是如此，
+  `feature.enable_profile_key`），其玩家进服后片刻就会因 *Invalid signature for profile
+  public key* 被断开，与 `enforce-secure-profile` 的设置无关。请在服务端安装会忽略聊天密钥的
+  模组，例如 [No Chat Reports](https://modrinth.com/mod/no-chat-reports)。正版玩家不受影响。
+- **皮肤。** 正版玩家的皮肤所有人都能看到。其他上游的皮肤带着该上游的签名，登录本服务的客户端
+  无法校验，因此可能显示为默认皮肤。上游的皮肤域名会被加入 `skinDomains`，以免材质本身被拦截。
+- 宕机或响应过慢（超过 5 秒）的上游视为不认识该玩家，不影响其他上游。
 
 ## 管理
 
@@ -135,6 +183,7 @@ Yggdrasil 命名空间之外：
 
 - **邀请码** —— 签发邀请码（可附备注，记录发给了谁）、查看哪些码尚未使用、撤销未使用的码。
 - **账号** —— 查看全部账号及其角色，为某个账号签发新密码，或删除某个账号。
+- **桥接玩家** —— 桥接模式下，查看从其他服务进服的玩家，并可释放其名字。
 
 重置密码会登出该账号的所有会话，并将新密码显示一次。删除账号会一并删除其角色并释放该名称。
 管理员不能删除自己的账号：若这是最后一个管理员，服务将无人可管。
