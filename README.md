@@ -124,11 +124,13 @@ Administration, all requiring the administrator's access token as a bearer token
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/admin/state` | Every account, invite code and bridged player, in one document |
+| GET | `/api/admin/state` | Every account, invite code, upstream and bridged player, in one document |
 | POST | `/api/admin/invites` | Issue invite codes; `{ count?, note? }`, at most 20 at a time |
 | DELETE | `/api/admin/invites/{code}` | Revoke an unused code |
 | POST | `/api/admin/accounts/{uuid}/password` | Issue a new password, returned once; signs the account out |
 | DELETE | `/api/admin/accounts/{uuid}` | Delete an account and its character |
+| POST | `/api/admin/upstreams` | Add a bridge upstream; `{ label: "mojang" }` or `{ label, apiRoot }` |
+| DELETE | `/api/admin/upstreams/{label}` | Remove an upstream and forget every player it vouched for |
 | DELETE | `/api/admin/bridged/{uuid}` | Forget a bridged player, releasing their name |
 
 ## Configuration
@@ -140,7 +142,6 @@ Variables in `wrangler.jsonc`:
 | `SERVER_NAME` | `Ratatoskr` | Service name shown in the metadata document |
 | `PUBLIC_URL` | empty | Public origin. When empty it is derived from the incoming request, which is usually correct |
 | `SKIN_DOMAINS` | empty | Additional hosts permitted to serve textures, comma-separated. The service's own host is always included |
-| `BRIDGE_UPSTREAMS` | empty | Other services whose players may join. See [Bridge mode](#bridge-mode) |
 
 There is one secret, set by `setup`: `SIGNING_KEY`, an RSA private key in PKCS#8 PEM
 form.
@@ -150,16 +151,17 @@ form.
 A Minecraft server can point authlib-injector at only one authentication service.
 Bridge mode lets that service be this one while players keep using an account they
 already have elsewhere — the official Mojang service, LittleSkin, or any other
-authlib-injector compatible service:
+authlib-injector compatible service.
 
-```jsonc
-"vars": { "BRIDGE_UPSTREAMS": "mojang, littleskin=https://littleskin.cn/api/yggdrasil" }
-```
+Upstreams are added in the administration view, under **External sign-in**: either
+Mojang, or a label of your choosing (e.g. `littleskin`) with the API root a launcher
+would be given (e.g. `https://littleskin.cn/api/yggdrasil`). The address is checked
+once when it is added. With no upstreams, the default, bridge mode is off.
 
-Entries are comma-separated: `mojang` for the official service, or `label=api-root`
-for anything else, where the API root is the address a launcher would be given. The
-label is stored against every player the upstream vouched for, so keep it stable if
-the address changes. Leaving the variable empty, the default, turns bridge mode off.
+The label is stored against every player the upstream vouched for, which is why it
+cannot be edited: removing an upstream forgets its players too, releasing their
+names. (Earlier versions read upstreams from a `BRIDGE_UPSTREAMS` variable; that is
+no longer read, so add them again in the view after upgrading.)
 
 Nothing changes for the Minecraft server — it is still started with
 `-javaagent:authlib-injector.jar=https://<your-worker-url>/api/yggdrasil` — or for
@@ -178,7 +180,7 @@ included.
   turned away, and registering it here is refused. A player who renames upstream
   carries their record over to the new name.
 - An administrator can release a name from the administration view, under
-  **Bridged players**, or with `DELETE /api/admin/bridged/{uuid}`.
+  **External sign-in**, or with `DELETE /api/admin/bridged/{uuid}`.
 
 Bridged players also resolve through `/api/profiles/minecraft` and
 `/sessionserver/session/minecraft/profile/{uuid}`, so whitelists and bans work for
@@ -214,8 +216,8 @@ Signing in with it reveals an **Administration** section on the site:
   see which codes are still unused, revoke ones that have not been spent.
 - **Accounts** — see every account and its character, issue a new password for one,
   or delete one.
-- **Bridged players** — in bridge mode, see who has joined from another service and
-  release a name.
+- **External sign-in** — add or remove the services whose players may join (see
+  [Bridge mode](#bridge-mode)), see who has joined from each, and release a name.
 
 Reissuing a password signs that account out everywhere and shows the new password
 once. Deleting an account removes its character and frees the name. An administrator

@@ -1,4 +1,5 @@
-import { claimBridged, findBridgedByName, findProfileById, findProfileByName } from './db';
+import { claimBridged, findBridgedByName, findProfileById, findProfileByName, listUpstreams } from './db';
+import { badRequest } from './errors';
 import type { ProfileProperty, SerializedProfile } from './profile';
 import { dash, isUuid, undash } from './uuid';
 import type { BridgedProfile, Env } from '../types';
@@ -7,7 +8,7 @@ import type { BridgedProfile, Env } from '../types';
  * Bridge mode.
  *
  * A Minecraft server points authlib-injector at exactly one service. With
- * BRIDGE_UPSTREAMS set, that service can be this one while players keep
+ * upstreams added in the admin view, that service can be this one while players keep
  * signing in wherever they already have an account: when hasJoined finds no
  * join record of ours, the same question is put to each upstream, and the
  * first to recognise the player answers for them.
@@ -35,45 +36,46 @@ const MOJANG: Upstream = {
 const LABEL_PATTERN = /^[a-z0-9_-]{1,32}$/;
 const UPSTREAM_TIMEOUT_MS = 5000;
 
-const parsedCache = new Map<string, Upstream[]>();
-
 /**
- * `BRIDGE_UPSTREAMS` is a comma-separated list, tried in order: `mojang` for
- * the official service, or `label=https://api-root` for any authlib-injector
- * compatible one, e.g. `mojang, littleskin=https://littleskin.cn/api/yggdrasil`.
- * Empty means bridge mode is off.
+ * The upstreams the administrator has added, oldest first. None means bridge
+ * mode is off. Read on every request rather than cached, so that a change in the
+ * admin view takes effect on the very next join.
  */
-export function upstreams(env: Env): Upstream[] {
-  const raw = env.BRIDGE_UPSTREAMS ?? '';
-  let parsed = parsedCache.get(raw);
-  if (!parsed) {
-    parsed = parseUpstreams(raw);
-    parsedCache.set(raw, parsed);
-  }
-  return parsed;
+export async function upstreams(env: Env): Promise<Upstream[]> {
+  return (await listUpstreams(env)).map((row) => toUpstream(row.label, row.api_root));
 }
 
-function parseUpstreams(raw: string): Upstream[] {
-  const result: Upstream[] = [];
-  for (const entry of raw.split(',').map((part) => part.trim()).filter(Boolean)) {
-    let upstream: Upstream;
-    if (entry === MOJANG.label) {
-      upstream = MOJANG;
-    } else {
-      const separator = entry.indexOf('=');
-      const label = entry.slice(0, separator).trim();
-      const apiRoot = entry.slice(separator + 1).trim().replace(/\/+$/, '');
-      if (separator < 0 || !LABEL_PATTERN.test(label) || !/^https?:\/\//.test(apiRoot)) {
-        throw new Error(`BRIDGE_UPSTREAMS: cannot parse "${entry}"`);
-      }
-      upstream = { label, session: `${apiRoot}/sessionserver`, apiRoot };
-    }
-    if (result.some((known) => known.label === upstream.label)) {
-      throw new Error(`BRIDGE_UPSTREAMS: "${upstream.label}" is listed twice`);
-    }
-    result.push(upstream);
+function toUpstream(label: string, apiRoot: string | null): Upstream {
+  return apiRoot ? { label, session: `${apiRoot}/sessionserver`, apiRoot } : MOJANG;
+}
+
+/**
+ * Checks an upstream the administrator wants to add: `mojang` for the official
+ * service, or any other label with the API root of an authlib-injector
+ * compatible one -- the same address players paste into their launcher. The
+ * metadata document is fetched once, so that a typo is caught here rather than
+ * by a player who cannot get in.
+ */
+export async function checkUpstream(label: string, rawApiRoot: string | undefined): Promise<Upstream> {
+  if (label === MOJANG.label) {
+    if (rawApiRoot) throw badRequest('"mojang" is the official service and takes no address.');
+    return MOJANG;
   }
-  return result;
+  if (!LABEL_PATTERN.test(label)) {
+    throw badRequest('A label is 1-32 characters of a-z, 0-9, _ or -.');
+  }
+
+  const apiRoot = (rawApiRoot ?? '').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\/[^/]/.test(apiRoot)) throw badRequest('The address must start with https:// or http://.');
+
+  try {
+    const response = await fetch(apiRoot, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+    const body = (await response.json()) as { signaturePublickey?: unknown };
+    if (typeof body?.signaturePublickey !== 'string') throw new Error('no signaturePublickey');
+  } catch {
+    throw badRequest(`${apiRoot} does not answer as a Yggdrasil API root.`);
+  }
+  return toUpstream(label, apiRoot);
 }
 
 /**
@@ -90,7 +92,7 @@ export async function bridgeHasJoined(
   serverId: string,
   ip: string | undefined,
 ): Promise<SerializedProfile | null> {
-  const configured = upstreams(env);
+  const configured = await upstreams(env);
   if (configured.length === 0) return null;
 
   if (await findProfileByName(env, username)) return null;
@@ -141,7 +143,7 @@ export async function bridgeProfile(
   bridged: BridgedProfile,
   signed: boolean,
 ): Promise<SerializedProfile | null> {
-  const upstream = upstreams(env).find((u) => u.label === bridged.source);
+  const upstream = (await upstreams(env)).find((u) => u.label === bridged.source);
   if (!upstream) return null;
 
   const url = new URL(`${upstream.session}/session/minecraft/profile/${undash(bridged.id)}`);
@@ -196,7 +198,7 @@ const skinDomainCache = new Map<string, { domains: string[]; expires: number }>(
  * upstream's metadata; when that fails, its own host is the best guess.
  */
 export async function upstreamSkinDomains(env: Env): Promise<string[]> {
-  const lists = await Promise.all(upstreams(env).map(skinDomainsOf));
+  const lists = await Promise.all((await upstreams(env)).map(skinDomainsOf));
   return [...new Set(lists.flat())];
 }
 

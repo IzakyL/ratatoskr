@@ -1,4 +1,4 @@
-import type { Account, BridgedProfile, Env, Invite, Profile, Token, User } from '../types';
+import type { Account, BridgedProfile, BridgeUpstream, Env, Invite, Profile, Token, User } from '../types';
 
 export const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -272,4 +272,38 @@ export async function claimBridged(
 export async function releaseBridged(env: Env, id: string): Promise<boolean> {
   const { meta } = await env.DB.prepare('DELETE FROM bridged_profiles WHERE id = ?').bind(id).run();
   return meta.changes === 1;
+}
+
+export async function listUpstreams(env: Env): Promise<BridgeUpstream[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM bridge_upstreams ORDER BY created_at, label',
+  ).all<BridgeUpstream>();
+  return results;
+}
+
+/** Returns false when the label is already taken. */
+export async function addUpstream(
+  env: Env,
+  label: string,
+  apiRoot: string | null,
+  now: number,
+): Promise<boolean> {
+  const { meta } = await env.DB.prepare(
+    'INSERT INTO bridge_upstreams (label, api_root, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING',
+  )
+    .bind(label, apiRoot, now)
+    .run();
+  return meta.changes === 1;
+}
+
+/**
+ * Removes an upstream together with every player it vouched for. Keeping them
+ * would hold their names with nobody left able to answer for them.
+ */
+export async function removeUpstream(env: Env, label: string): Promise<boolean> {
+  const [, removed] = await env.DB.batch([
+    env.DB.prepare('DELETE FROM bridged_profiles WHERE source = ?').bind(label),
+    env.DB.prepare('DELETE FROM bridge_upstreams WHERE label = ?').bind(label),
+  ]);
+  return removed!.meta.changes === 1;
 }

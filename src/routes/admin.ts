@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
+import { checkUpstream } from '../lib/bridge';
 import { generateInviteCode, generatePassword, hashPassword } from '../lib/crypto';
 import {
+  addUpstream,
   createInvites,
   deleteAccount,
   findUserById,
@@ -8,7 +10,9 @@ import {
   listAccounts,
   listBridged,
   listInvites,
+  listUpstreams,
   releaseBridged,
+  removeUpstream,
   replacePassword,
   revokeInvite,
 } from '../lib/db';
@@ -50,12 +54,13 @@ admin.use('*', async (c, next) => {
 
 /** Everything the admin view renders, in one request. */
 admin.get('/state', async (c) => {
-  const [accounts, invites, bridged] = await Promise.all([
+  const [accounts, invites, upstreams, bridged] = await Promise.all([
     listAccounts(c.env),
     listInvites(c.env),
+    listUpstreams(c.env),
     listBridged(c.env),
   ]);
-  return c.json({ self: c.get('admin').id, accounts, invites, bridged });
+  return c.json({ self: c.get('admin').id, accounts, invites, upstreams, bridged });
 });
 
 admin.post('/invites', async (c) => {
@@ -95,6 +100,27 @@ admin.delete('/accounts/:id', async (c) => {
   if (!user) throw badRequest('No such account.');
 
   await deleteAccount(c.env, id);
+  return c.body(null, 204);
+});
+
+/** Adds an upstream for bridge mode; see lib/bridge.ts. */
+admin.post('/upstreams', async (c) => {
+  interface AddRequest {
+    label?: string;
+    apiRoot?: string;
+  }
+  const body = await c.req.json<AddRequest>().catch(() => ({}) as AddRequest);
+
+  const upstream = await checkUpstream(body.label?.trim().toLowerCase() ?? '', body.apiRoot?.trim());
+  if (!(await addUpstream(c.env, upstream.label, upstream.apiRoot, Date.now()))) {
+    throw badRequest(`"${upstream.label}" is already added.`);
+  }
+  return c.json({ label: upstream.label, api_root: upstream.apiRoot }, 201);
+});
+
+/** Removes an upstream, and with it every player it vouched for. */
+admin.delete('/upstreams/:label', async (c) => {
+  if (!(await removeUpstream(c.env, c.req.param('label')))) throw badRequest('No such upstream.');
   return c.body(null, 204);
 });
 

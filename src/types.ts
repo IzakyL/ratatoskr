@@ -5,7 +5,6 @@ export interface Env {
   SERVER_NAME: string;
   PUBLIC_URL: string;
   SKIN_DOMAINS: string;
-  BRIDGE_UPSTREAMS: string;
 
   SIGNING_KEY: string;
 }
@@ -48,6 +47,13 @@ export interface BridgedProfile {
   name_lower: string;
   first_seen: number;
   last_seen: number;
+}
+
+/** Another Yggdrasil service whose players may join; see migrations/0005_bridge_upstreams.sql. */
+export interface BridgeUpstream {
+  label: string;
+  api_root: string | null;
+  created_at: number;
 }
 
 export interface Invite {

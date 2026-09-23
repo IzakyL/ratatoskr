@@ -7,213 +7,233 @@
     <style>
       :root {
         color-scheme: light dark;
-        --bg: #f7f7f8;
+        --bg: #f4f4f5;
         --panel: #ffffff;
-        --border: #dcdcde;
+        --subtle: #fafafa;
+        --border: #e2e2e5;
         --text: #1f1f23;
         --muted: #6b6b73;
-        /* Neutral by design: the only colour in the page is the red an error
-           earns. Buttons invert against the page instead of tinting it. */
-        --accent: #1f1f23;
-        --accent-fg: #ffffff;
-        --focus: #737380;
-        --danger: #b02a2a;
-        --radius: 6px;
+        /* One colour for anything you can act on; everything else stays grey. */
+        --primary: #0a5ad6;
+        --primary-hover: #0848ab;
+        --primary-fg: #ffffff;
+        --focus: #0a5ad6;
+        --danger: #c02b2b;
+        --radius: 4px;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #16161a;
-          --panel: #1d1d21;
-          --border: #35353b;
+          --bg: #161618;
+          --panel: #1e1e21;
+          --subtle: #232327;
+          --border: #34343a;
           --text: #ececef;
           --muted: #9a9aa3;
-          --accent: #ececef;
-          --accent-fg: #16161a;
-          --focus: #8a8a94;
-          --danger: #e06c6c;
+          --primary: #3b82f6;
+          --primary-hover: #5b96f7;
+          --primary-fg: #ffffff;
+          --focus: #5b96f7;
+          --danger: #ef6b6b;
         }
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: 2.5rem 1.25rem 4rem;
         background: var(--bg);
         color: var(--text);
-        font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
       }
-      main { max-width: 40rem; margin: 0 auto; }
-      /* With the administration panel in play there is a second column's worth of
-         content, so the page widens and the two sit side by side. */
-      main.wide { max-width: 66rem; }
-      @media (min-width: 62rem) {
-        main.wide {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-          gap: 1rem;
-          align-items: start;
-        }
-        main.wide > * { grid-column: 1 / -1; }
-        main.wide > #account { grid-column: 1; }
-        main.wide > #admin { grid-column: 2; }
-        main.wide section { margin-bottom: 0; }
+      h2, h3, p { margin: 0; }
+      [hidden] { display: none !important; }
+      code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+      .muted { color: var(--muted); font-size: 13px; }
+
+      /* ---------- top bar ---------- */
+      .topbar {
+        position: sticky; top: 0; z-index: 1;
+        height: 48px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
       }
-      header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.25rem; }
-      header h1 { flex: 1; margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; }
-      h2 { margin: 0 0 1rem; font-size: 1.05rem; letter-spacing: -0.01em; }
-      h3 { margin: 0 0 0.35rem; font-size: 0.9rem; letter-spacing: -0.01em; }
-      /* Invites and accounts: one row each, actions pushed to the right. */
-      .rows { list-style: none; margin: 0.75rem 0 0; padding: 0; }
-      .rows li {
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-        padding: 0.55rem 0;
-        border-top: 1px solid var(--border);
-        font-size: 0.9rem;
+      .topbar .inner {
+        display: flex; align-items: center; gap: 12px;
+        max-width: 72rem; height: 100%; margin: 0 auto; padding: 0 16px;
       }
-      .rows li > .grow { flex: 1; min-width: 12rem; }
-      .rows button { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-      .rows .muted { font-size: 0.8rem; }
-      .empty { padding: 0.75rem 0; color: var(--muted); font-size: 0.85rem; }
-      .tag {
-        padding: 0.05rem 0.4rem; border-radius: 999px;
-        border: 1px solid var(--border); color: var(--muted);
-        font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+      .brand { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+      .topbar .tagline { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+      #whoami { color: var(--muted); }
+      @media (max-width: 36rem) { .topbar .tagline, #whoami { display: none; } .brand { flex: 1; } }
+
+      /* ---------- layout ---------- */
+      main { max-width: 72rem; margin: 0 auto; padding: 24px 16px 48px; }
+      #auth { max-width: 24rem; margin: 40px auto 0; }
+      #dash { display: grid; gap: 16px; max-width: 40rem; margin: 0 auto; }
+      #dash .column { display: grid; gap: 16px; align-content: start; }
+      /* An administrator gets a second column; everyone else a single narrow one. */
+      @media (min-width: 60rem) {
+        #dash.admin { max-width: none; grid-template-columns: 22rem minmax(0, 1fr); align-items: start; }
+        #dash.admin > #new-password { grid-column: 1 / -1; }
       }
-      #invite-note { flex: 1; min-width: 10rem; margin-top: 0; }
-      .lede { margin: 0 0 2rem; color: var(--muted); }
-      section {
+
+      /* ---------- cards ---------- */
+      .card {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
-        padding: 1.25rem;
-        margin-bottom: 1rem;
+        overflow: hidden;
       }
-      label { display: block; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--muted); }
-      input[type="text"], input[type="email"], input[type="password"], input[type="file"] {
-        display: block;
+      .card-head { padding: 14px 16px 0; }
+      .card-head h2 { font-size: 14px; font-weight: 600; }
+      .card-head p { margin-top: 2px; }
+      .card-body { padding: 12px 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .card-body + .card-body { border-top: 1px solid var(--border); }
+      .card.warning { border-color: var(--danger); }
+      .card-head + .rows { margin-top: 12px; }
+
+      /* ---------- controls ---------- */
+      label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+      input[type="text"], input[type="email"], input[type="password"], input[type="url"], input[type="file"], select {
         width: 100%;
-        margin-top: 0.3rem;
-        padding: 0.5rem 0.65rem;
+        height: 32px;
+        padding: 0 10px;
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         color: var(--text);
         font: inherit;
-        font-size: 0.9rem;
+        font-size: 13px;
       }
-      input[type="file"] { padding: 0.4rem 0.5rem; color: var(--muted); cursor: pointer; }
-      /* The default "Choose File" chrome is the ugliest control on the page and
-         the one browsers style least alike; make it look like our own button. */
+      input[type="file"] { padding: 3px 4px; color: var(--muted); cursor: pointer; }
       input[type="file"]::file-selector-button {
-        margin-right: 0.65rem;
-        padding: 0.3rem 0.7rem;
-        background: var(--bg);
+        height: 24px; margin-right: 8px; padding: 0 10px;
+        background: var(--subtle);
         border: 1px solid var(--border);
-        border-radius: var(--radius);
+        border-radius: 3px;
         color: var(--text);
-        font: inherit;
-        font-size: 0.85rem;
+        font: inherit; font-size: 12px;
         cursor: pointer;
       }
-      input[type="file"]::file-selector-button:hover { border-color: var(--muted); }
-      input[type="radio"] { accent-color: var(--text); }
+      select { width: auto; padding: 0 6px; cursor: pointer; }
+      input[type="radio"] { accent-color: var(--primary); margin: 0; }
       input:focus-visible, select:focus-visible, button:focus-visible {
         outline: 2px solid var(--focus);
         outline-offset: 1px;
       }
       button {
-        padding: 0.45rem 0.9rem;
+        height: 32px;
+        padding: 0 12px;
         border: 1px solid transparent;
         border-radius: var(--radius);
-        background: var(--accent);
-        color: var(--accent-fg);
+        background: var(--primary);
+        color: var(--primary-fg);
         font: inherit;
-        font-size: 0.9rem;
+        font-size: 13px;
         font-weight: 500;
+        white-space: nowrap;
         cursor: pointer;
-        transition: background-color 0.12s, border-color 0.12s, opacity 0.12s;
       }
-      button:hover { opacity: 0.85; }
-      button.secondary {
-        background: var(--panel);
-        border-color: var(--border);
-        color: var(--text);
-        opacity: 1;
-      }
-      button.secondary:hover { background: var(--bg); border-color: var(--muted); }
+      button:hover { background: var(--primary-hover); }
+      button.secondary { background: var(--panel); border-color: var(--border); color: var(--text); }
+      button.secondary:hover { background: var(--subtle); border-color: var(--muted); }
+      button.danger { background: var(--panel); border-color: var(--border); color: var(--danger); }
+      button.danger:hover { background: var(--subtle); border-color: var(--danger); }
+      button.sm { height: 26px; padding: 0 8px; font-size: 12px; }
       button.link {
-        background: none; border: none; padding: 0;
-        color: var(--text); font-size: 0.85rem; text-decoration: underline; cursor: pointer;
-        text-underline-offset: 2px;
+        height: auto; padding: 0; background: none; border: none;
+        color: var(--primary); font-weight: 400;
       }
-      button.link:hover { color: var(--muted); opacity: 1; }
-      select#lang {
-        padding: 0.3rem 0.4rem;
-        background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        color: var(--muted);
-        font: inherit;
-        font-size: 0.8rem;
-        cursor: pointer;
-      }
-      .row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
-      .radios { display: flex; gap: 1rem; margin: 0.1rem 0 0.9rem; font-size: 0.9rem; }
-      .radios label { display: flex; align-items: center; gap: 0.35rem; margin: 0; color: var(--text); }
-      code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
-      .url {
-        display: flex; gap: 0.5rem; align-items: center;
-        padding: 0.5rem 0.7rem;
-        background: var(--bg);
+      button.link:hover { background: none; text-decoration: underline; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .row > .grow { flex: 1; min-width: 8rem; }
+      .radios { display: flex; gap: 16px; font-size: 13px; }
+      .radios label { display: flex; align-items: center; gap: 6px; }
+
+      .copybox {
+        display: flex; gap: 8px; align-items: center;
+        height: 36px; padding: 0 4px 0 10px;
+        background: var(--subtle);
         border: 1px solid var(--border);
         border-radius: var(--radius);
       }
-      .url span { flex: 1; overflow-x: auto; white-space: nowrap; }
-      .preview { display: flex; gap: 1.25rem; align-items: flex-start; margin-bottom: 1.25rem; }
-      .preview img {
-        width: 128px; height: 128px;
+      .copybox span { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 13px; }
+
+      .profile { display: flex; gap: 12px; align-items: center; }
+      .profile img {
+        width: 64px; height: 64px; flex: none;
         image-rendering: pixelated;
-        background: var(--bg);
+        background: var(--subtle);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         object-fit: contain;
       }
-      .preview p { margin: 0 0 0.35rem; }
-      .muted { color: var(--muted); font-size: 0.85rem; }
+      .profile > div { min-width: 0; }
+      .profile .mono { word-break: break-all; }
+      #profile-id { font-size: 12px; }
+
       .note {
-        margin-top: 0.5rem; padding: 0.6rem 0.7rem;
-        border-radius: var(--radius); font-size: 0.85rem;
-        background: var(--bg);
+        padding: 8px 10px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        background: var(--subtle);
         border: 1px solid var(--border);
         border-left: 3px solid var(--muted);
       }
       .note.error { color: var(--danger); border-left-color: var(--danger); }
-      .note.ok { color: var(--text); border-left-color: var(--text); }
-      [hidden] { display: none !important; }
-      hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+      .note.ok { border-left-color: var(--primary); }
+      .card > .note { margin: 0 16px 16px; }
+
+      /* ---------- lists: one row per item, flush with the card edges ---------- */
+      .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+      .rows li {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        min-height: 44px; padding: 6px 16px;
+        font-size: 13px;
+      }
+      .rows li + li { border-top: 1px solid var(--border); }
+      .rows li > .grow { flex: 1; min-width: 10rem; display: grid; }
+      .rows li.empty { color: var(--muted); }
+      .rows li.group {
+        min-height: 0; padding: 6px 16px;
+        background: var(--subtle);
+        color: var(--muted); font-size: 12px; font-weight: 500;
+      }
+      .tag {
+        display: inline-block;
+        padding: 0 6px; border-radius: 3px;
+        background: var(--subtle); border: 1px solid var(--border);
+        color: var(--muted); font-size: 11px; line-height: 18px;
+      }
+      .rows strong { font-weight: 600; }
+      .subhead { padding: 14px 16px 8px; font-size: 13px; font-weight: 600; }
     </style>
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Ratatoskr</h1>
+    <nav class="topbar">
+      <div class="inner">
+        <span class="brand">Ratatoskr</span>
+        <span class="tagline muted" data-i18n="tagline"></span>
+        <span id="whoami" class="mono" hidden></span>
         <select id="lang" aria-label="Language">
           <option value="en">English</option>
           <option value="zh-CN">中文</option>
         </select>
-      </header>
-      <p class="lede" data-i18n="tagline"></p>
+        <button type="button" class="secondary sm" id="logout" data-i18n="signOut" hidden></button>
+      </div>
+    </nav>
 
+    <main>
       <!-- Signed out -->
-      <section id="auth">
-        <h2 id="auth-title" data-i18n="signIn"></h2>
+      <section id="auth" class="card">
+        <div class="card-head">
+          <h2 id="auth-title" data-i18n="signIn"></h2>
+        </div>
 
-        <form id="login-form">
-          <label>
+        <form id="login-form" class="card-body">
+          <label class="field">
             <span data-i18n="emailOrCharacter"></span>
             <input type="text" name="username" autocomplete="username" required />
           </label>
-          <label>
+          <label class="field">
             <span data-i18n="password"></span>
             <input type="password" name="password" autocomplete="current-password" required />
           </label>
@@ -223,16 +243,16 @@
           </div>
         </form>
 
-        <form id="register-form" hidden>
-          <label>
+        <form id="register-form" class="card-body" hidden>
+          <label class="field">
             <span data-i18n="email"></span>
             <input type="email" name="email" autocomplete="email" required />
           </label>
-          <label>
+          <label class="field">
             <span data-i18n="characterName"></span>
             <input type="text" name="profileName" pattern="[A-Za-z0-9_]{3,16}" required />
           </label>
-          <label>
+          <label class="field">
             <span data-i18n="inviteCode"></span>
             <input type="text" name="inviteCode" required />
           </label>
@@ -246,100 +266,134 @@
         <div id="auth-note" class="note" hidden></div>
       </section>
 
-      <!-- Shown once: after registration, or after an admin reissues a password.
-           Neither can be recovered afterwards, so the heading is set in place. -->
-      <section id="new-password" hidden>
-        <h2 id="password-title"></h2>
-        <div class="url">
-          <span id="password-value" class="mono"></span>
-          <button type="button" class="secondary" id="copy-password" data-i18n="copy"></button>
-        </div>
-        <p class="note error" data-i18n="passwordWarning"></p>
-        <button type="button" class="secondary" id="dismiss-password" data-i18n="passwordSaved"></button>
-      </section>
-
       <!-- Signed in -->
-      <section id="account" hidden>
-        <h2 data-i18n="skinSection"></h2>
-        <div class="preview">
-          <img id="skin-preview" alt="" />
-          <div>
-            <p><strong id="profile-name" class="mono"></strong></p>
-            <p class="muted">UUID <span id="profile-id" class="mono"></span></p>
-            <p class="muted" id="skin-status"></p>
+      <div id="dash" hidden>
+        <!-- Shown once: after registration, or after an admin reissues a password.
+             Neither can be recovered afterwards, so the heading is set in place. -->
+        <section id="new-password" class="card warning" hidden>
+          <div class="card-head">
+            <h2 id="password-title"></h2>
+            <p class="muted" data-i18n="passwordWarning"></p>
           </div>
+          <div class="card-body">
+            <div class="copybox">
+              <span id="password-value" class="mono"></span>
+              <button type="button" class="secondary sm" id="copy-password" data-i18n="copy"></button>
+            </div>
+            <div class="row">
+              <button type="button" class="secondary" id="dismiss-password" data-i18n="passwordSaved"></button>
+            </div>
+          </div>
+        </section>
+
+        <div class="column" id="mine">
+          <section class="card" id="account">
+            <div class="card-head">
+              <h2 data-i18n="skinSection"></h2>
+            </div>
+            <div class="card-body">
+              <div class="profile">
+                <img id="skin-preview" alt="" />
+                <div>
+                  <strong id="profile-name" class="mono"></strong>
+                  <p class="muted mono" id="profile-id"></p>
+                  <p class="muted" id="skin-status"></p>
+                </div>
+              </div>
+            </div>
+
+            <form id="skin-form" class="card-body">
+              <label class="field">
+                <span data-i18n="skinFile"></span>
+                <input type="file" name="file" accept="image/png" required />
+              </label>
+              <div class="radios">
+                <label><input type="radio" name="model" value="default" checked /> <span data-i18n="modelClassic"></span></label>
+                <label><input type="radio" name="model" value="slim" /> <span data-i18n="modelSlim"></span></label>
+              </div>
+              <div class="row">
+                <button type="submit" data-i18n="uploadSkin"></button>
+                <button type="button" class="danger" id="delete-skin" data-i18n="deleteSkin"></button>
+              </div>
+            </form>
+
+            <form id="cape-form" class="card-body">
+              <label class="field">
+                <span data-i18n="capeFile"></span>
+                <input type="file" name="file" accept="image/png" required />
+              </label>
+              <div class="row">
+                <button type="submit" data-i18n="uploadCape"></button>
+                <button type="button" class="danger" id="delete-cape" data-i18n="deleteCape"></button>
+              </div>
+            </form>
+
+            <div id="account-note" class="note" hidden></div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2 data-i18n="launcherSection"></h2>
+              <p class="muted" data-i18n="launcherHint"></p>
+            </div>
+            <div class="card-body">
+              <div class="copybox">
+                <span id="yggdrasil-url" class="mono"></span>
+                <button type="button" class="secondary sm" id="copy-url" data-i18n="copy"></button>
+              </div>
+            </div>
+          </section>
         </div>
 
-        <form id="skin-form">
-          <label>
-            <span data-i18n="skinFile"></span>
-            <input type="file" name="file" accept="image/png" required />
-          </label>
-          <div class="radios">
-            <label><input type="radio" name="model" value="default" checked /> <span data-i18n="modelClassic"></span></label>
-            <label><input type="radio" name="model" value="slim" /> <span data-i18n="modelSlim"></span></label>
-          </div>
-          <div class="row">
-            <button type="submit" data-i18n="uploadSkin"></button>
-            <button type="button" class="secondary" id="delete-skin" data-i18n="deleteSkin"></button>
-          </div>
-        </form>
+        <!-- Only rendered for an account with is_admin; the API is the real guard. -->
+        <div class="column" id="admin" hidden>
+          <div id="admin-note" class="note" hidden></div>
 
-        <hr />
+          <section class="card">
+            <div class="card-head">
+              <h2 data-i18n="invitesHeading"></h2>
+              <p class="muted" data-i18n="invitesHint"></p>
+            </div>
+            <form id="mint-form" class="card-body">
+              <div class="row">
+                <input type="text" name="note" id="invite-note" class="grow" />
+                <button type="submit" data-i18n="mintInvite"></button>
+              </div>
+            </form>
+            <ul id="invite-list" class="rows"></ul>
+          </section>
 
-        <form id="cape-form">
-          <label>
-            <span data-i18n="capeFile"></span>
-            <input type="file" name="file" accept="image/png" required />
-          </label>
-          <div class="row">
-            <button type="submit" data-i18n="uploadCape"></button>
-            <button type="button" class="secondary" id="delete-cape" data-i18n="deleteCape"></button>
-          </div>
-        </form>
+          <section class="card">
+            <div class="card-head">
+              <h2 data-i18n="accountsHeading"></h2>
+            </div>
+            <ul id="account-list" class="rows"></ul>
+          </section>
 
-        <div id="account-note" class="note" hidden></div>
+          <!-- Bridge mode: the services whose players may also join, and those players. -->
+          <section class="card">
+            <div class="card-head">
+              <h2 data-i18n="bridgeSection"></h2>
+              <p class="muted" data-i18n="bridgeHint"></p>
+            </div>
+            <form id="source-form" class="card-body">
+              <div class="row">
+                <select id="source-kind" aria-label="Type">
+                  <option value="yggdrasil" data-i18n="sourceKindYggdrasil"></option>
+                  <option value="mojang" data-i18n="sourceKindMojang"></option>
+                </select>
+                <input type="text" id="source-label" class="grow" style="max-width: 9rem" />
+                <input type="url" id="source-address" class="grow" />
+                <button type="submit" data-i18n="addSource"></button>
+              </div>
+            </form>
+            <ul id="source-list" class="rows"></ul>
 
-        <hr />
-
-        <h2 data-i18n="launcherSection"></h2>
-        <p class="muted" data-i18n="launcherHint"></p>
-        <div class="url">
-          <span id="yggdrasil-url" class="mono"></span>
-          <button type="button" class="secondary" id="copy-url" data-i18n="copy"></button>
+            <h3 class="subhead" data-i18n="bridgedHeading"></h3>
+            <ul id="bridged-list" class="rows"></ul>
+          </section>
         </div>
-
-        <hr />
-        <button type="button" class="secondary" id="logout" data-i18n="signOut"></button>
-      </section>
-
-      <!-- Only rendered for an account with is_admin; the API is the real guard. -->
-      <section id="admin" hidden>
-        <h2 data-i18n="adminSection"></h2>
-
-        <h3 data-i18n="invitesHeading"></h3>
-        <p class="muted" data-i18n="invitesHint"></p>
-        <form id="mint-form" class="row">
-          <input type="text" name="note" id="invite-note" />
-          <button type="submit" data-i18n="mintInvite"></button>
-        </form>
-        <ul id="invite-list" class="rows"></ul>
-
-        <hr />
-
-        <h3 data-i18n="accountsHeading"></h3>
-        <ul id="account-list" class="rows"></ul>
-
-        <!-- Bridge mode only: players who signed in with another service. -->
-        <div id="bridged" hidden>
-          <hr />
-          <h3 data-i18n="bridgedHeading"></h3>
-          <p class="muted" data-i18n="bridgedHint"></p>
-          <ul id="bridged-list" class="rows"></ul>
-        </div>
-
-        <div id="admin-note" class="note" hidden></div>
-      </section>
+      </div>
     </main>
 
     <script type="module">
@@ -352,26 +406,26 @@
        */
       const STRINGS = {
         en: {
-          tagline: 'Yggdrasil authentication and skin service.',
+          tagline: 'Yggdrasil authentication and skin service',
           signIn: 'Sign in',
           register: 'Register',
-          email: 'Email address',
-          emailOrCharacter: 'Email address or character name',
+          email: 'Email',
+          emailOrCharacter: 'Email or character name',
           password: 'Password',
-          characterName: 'Character name (3–16 characters: A–Z, 0–9, underscore)',
-          inviteCode: 'Invite code (single use)',
-          passwordIsGenerated: 'A password will be generated for you and shown once after registration.',
+          characterName: 'Character name (3–16 of A–Z, 0–9, _)',
+          inviteCode: 'Invite code',
+          passwordIsGenerated: 'A password is generated for you and shown once after registration.',
           toRegister: 'Register an account',
           toSignIn: 'Sign in instead',
           yourPassword: 'Your password',
           passwordWarning:
-            'Save this now. It is shown only once — the server stores a hash of it, not the password itself. If it is lost, an administrator must issue a new one.',
+            'Shown only once — save it now. If it is lost, an administrator must reset it.',
           passwordSaved: 'I have saved it',
           copy: 'Copy',
           copied: 'Copied',
           skinSection: 'Skin',
-          skinFile: 'Skin file (64×64 or 64×32 PNG)',
-          capeFile: 'Cape file (PNG)',
+          skinFile: 'Skin (PNG, 64×64 or 64×32)',
+          capeFile: 'Cape (PNG)',
           modelClassic: 'Classic (Steve)',
           modelSlim: 'Slim (Alex)',
           uploadSkin: 'Upload skin',
@@ -382,113 +436,139 @@
           launcherHint:
             'Add this address as an external authentication server in a launcher that supports authlib-injector:',
           signOut: 'Sign out',
-          noSkin: 'No skin set.',
-          capeOnly: 'Cape set, no skin.',
-          skinSet: 'Skin set, {model} model.',
-          skinAndCapeSet: 'Skin set, {model} model. Cape set.',
-          skinUpdated: 'Skin updated.',
-          capeUpdated: 'Cape updated.',
-          skinDeleted: 'Skin removed.',
-          capeDeleted: 'Cape removed.',
+          noSkin: 'No skin',
+          capeOnly: 'No skin, cape set',
+          skinSet: 'Skin: {model}',
+          skinAndCapeSet: 'Skin: {model}, cape set',
+          skinUpdated: 'Skin updated',
+          capeUpdated: 'Cape updated',
+          skinDeleted: 'Skin removed',
+          capeDeleted: 'Cape removed',
           sessionExpired: 'Your session has expired. Please sign in again.',
           noCharacter: 'This account has no character.',
-          requestFailed: 'Request failed ({status}).',
-          adminSection: 'Administration',
+          requestFailed: 'Request failed ({status})',
           invitesHeading: 'Invite codes',
-          invitesHint: 'Each code registers exactly one account. A note is optional, and only for your own records.',
-          inviteNotePlaceholder: 'Note — who is this for?',
+          invitesHint: 'One account per code. Notes are only visible to you.',
+          inviteNotePlaceholder: 'Note (optional)',
           mintInvite: 'Issue code',
-          noInvites: 'No invite codes yet.',
+          noInvites: 'No invite codes',
           inviteUnused: 'unused',
           inviteUsed: 'used {date}',
           revoke: 'Revoke',
           accountsHeading: 'Accounts',
-          noAccounts: 'No accounts.',
+          noAccounts: 'No accounts',
           adminTag: 'admin',
           registered: 'registered {date}',
           resetPassword: 'Reset password',
           deleteAccount: 'Delete',
           confirmDelete: 'Delete {name} and their character permanently? This cannot be undone.',
-          confirmReset: 'Issue a new password for {name}? Their current password stops working and they are signed out everywhere.',
-          inviteIssued: 'Invite code issued.',
-          inviteRevoked: 'Invite code revoked.',
-          accountDeleted: 'Account deleted.',
+          confirmReset: 'Reset the password of {name}? The old one stops working and they are signed out everywhere.',
+          inviteIssued: 'Invite code issued',
+          inviteRevoked: 'Invite code revoked',
+          accountDeleted: 'Account deleted',
           passwordFor: 'New password for {name}',
-          bridgedHeading: 'Bridged players',
-          bridgedHint: 'Players who signed in with another service. Each name belongs to the first player who joined with it; release it to let someone else take it.',
+          bridgeSection: 'External sign-in',
+          bridgeHint: 'Let players from other services join. Duplicate names: first come, first served.',
+          sourceKindYggdrasil: 'Yggdrasil API',
+          sourceKindMojang: 'Mojang (official)',
+          sourceLabelPlaceholder: 'Label, e.g. littleskin',
+          sourceAddressPlaceholder: 'API address, e.g. https://littleskin.cn/api/yggdrasil',
+          addSource: 'Add',
+          removeSource: 'Remove',
+          noSources: 'No services added, so only accounts registered here can join',
+          playerCount: '{count} players',
+          sourceMissing: 'service not added',
+          confirmRemoveSource:
+            'Remove {name}? Its {count} players are forgotten with it, and their names released.',
+          sourceAdded: 'Service added',
+          sourceRemoved: 'Service removed',
+          bridgedHeading: 'External players',
+          noBridged: 'No external players have joined yet',
           lastSeen: 'last seen {date}',
           release: 'Release name',
-          confirmRelease: 'Release the name {name}? The next player to join with it, from any service, will hold it.',
-          bridgedReleased: 'Name released.',
+          confirmRelease: 'Release the name {name}? Anyone may take it afterwards.',
+          bridgedReleased: 'Name released',
         },
         'zh-CN': {
-          tagline: 'Yggdrasil 认证与皮肤服务。',
+          tagline: 'Yggdrasil 外置登录与皮肤站',
           signIn: '登录',
           register: '注册',
-          email: '邮箱地址',
-          emailOrCharacter: '邮箱地址或角色名',
+          email: '邮箱',
+          emailOrCharacter: '邮箱或角色名',
           password: '密码',
-          characterName: '角色名（3–16 位：字母、数字或下划线）',
-          inviteCode: '邀请码（一次性）',
-          passwordIsGenerated: '密码由服务器生成，注册完成后显示一次。',
+          characterName: '角色名（3–16 位字母、数字、下划线）',
+          inviteCode: '邀请码',
+          passwordIsGenerated: '密码自动生成，注册后仅显示一次',
           toRegister: '注册账号',
-          toSignIn: '返回登录',
+          toSignIn: '已有账号？登录',
           yourPassword: '你的密码',
-          passwordWarning:
-            '请立即保存。密码仅显示一次——服务器只存储其哈希值，不存储密码本身。密码遗失后需由管理员重新签发。',
+          passwordWarning: '仅显示一次，请立即保存。遗失后只能找管理员重置。',
           passwordSaved: '已保存',
           copy: '复制',
           copied: '已复制',
           skinSection: '皮肤',
-          skinFile: '皮肤文件（64×64 或 64×32 PNG）',
-          capeFile: '披风文件（PNG）',
+          skinFile: '皮肤（PNG，64×64 或 64×32）',
+          capeFile: '披风（PNG）',
           modelClassic: '经典（Steve）',
           modelSlim: '纤细（Alex）',
           uploadSkin: '上传皮肤',
-          deleteSkin: '移除皮肤',
+          deleteSkin: '删除皮肤',
           uploadCape: '上传披风',
-          deleteCape: '移除披风',
-          launcherSection: '启动器配置',
-          launcherHint: '在支持 authlib-injector 的启动器中，将下列地址添加为外置认证服务器：',
+          deleteCape: '删除披风',
+          launcherSection: '启动器设置',
+          launcherHint: '在支持 authlib-injector 的启动器中添加外置登录服务器：',
           signOut: '退出登录',
-          noSkin: '未设置皮肤。',
-          capeOnly: '已设置披风，未设置皮肤。',
-          skinSet: '已设置皮肤，{model} 模型。',
-          skinAndCapeSet: '已设置皮肤，{model} 模型。已设置披风。',
-          skinUpdated: '皮肤已更新。',
-          capeUpdated: '披风已更新。',
-          skinDeleted: '皮肤已移除。',
-          capeDeleted: '披风已移除。',
-          sessionExpired: '登录已过期，请重新登录。',
-          noCharacter: '该账号没有角色。',
-          requestFailed: '请求失败（{status}）。',
-          adminSection: '管理',
+          noSkin: '未设置皮肤',
+          capeOnly: '无皮肤，有披风',
+          skinSet: '皮肤：{model}',
+          skinAndCapeSet: '皮肤：{model}，有披风',
+          skinUpdated: '皮肤已更新',
+          capeUpdated: '披风已更新',
+          skinDeleted: '皮肤已删除',
+          capeDeleted: '披风已删除',
+          sessionExpired: '登录已过期，请重新登录',
+          noCharacter: '该账号没有角色',
+          requestFailed: '请求失败（{status}）',
           invitesHeading: '邀请码',
-          invitesHint: '每个邀请码只能注册一个账号。备注是可选的，仅供你自己查阅。',
-          inviteNotePlaceholder: '备注 —— 这个码发给谁？',
-          mintInvite: '签发邀请码',
-          noInvites: '暂无邀请码。',
+          invitesHint: '一码一号，备注仅自己可见',
+          inviteNotePlaceholder: '备注（可选）',
+          mintInvite: '生成邀请码',
+          noInvites: '暂无邀请码',
           inviteUnused: '未使用',
-          inviteUsed: '已使用 {date}',
+          inviteUsed: '{date} 已使用',
           revoke: '撤销',
           accountsHeading: '账号',
-          noAccounts: '暂无账号。',
+          noAccounts: '暂无账号',
           adminTag: '管理员',
-          registered: '注册于 {date}',
+          registered: '{date} 注册',
           resetPassword: '重置密码',
           deleteAccount: '删除',
-          confirmDelete: '永久删除 {name} 及其角色？此操作不可撤销。',
-          confirmReset: '为 {name} 签发新密码？其当前密码将立即失效，且所有会话都会被登出。',
-          inviteIssued: '邀请码已签发。',
-          inviteRevoked: '邀请码已撤销。',
-          accountDeleted: '账号已删除。',
+          confirmDelete: '永久删除 {name} 及其角色？无法恢复。',
+          confirmReset: '重置 {name} 的密码？旧密码立即失效，所有设备将退出登录。',
+          inviteIssued: '已生成邀请码',
+          inviteRevoked: '已撤销邀请码',
+          accountDeleted: '账号已删除',
           passwordFor: '{name} 的新密码',
-          bridgedHeading: '桥接玩家',
-          bridgedHint: '通过其他验证服务登录的玩家。每个名字归第一个用它进服的玩家所有；释放后其他人才能使用。',
-          lastSeen: '最近登录 {date}',
-          release: '释放名字',
-          confirmRelease: '释放名字 {name}？之后第一个用这个名字进服的玩家（无论来自哪个服务）将获得它。',
-          bridgedReleased: '名字已释放。',
+          bridgeSection: '外部登录',
+          bridgeHint: '允许其他验证服务的玩家进服，重名时先到先得',
+          sourceKindYggdrasil: 'Yggdrasil API',
+          sourceKindMojang: 'Mojang 正版',
+          sourceLabelPlaceholder: '标识，如 littleskin',
+          sourceAddressPlaceholder: 'API 地址，如 https://littleskin.cn/api/yggdrasil',
+          addSource: '添加',
+          removeSource: '移除',
+          noSources: '未添加外部登录源，只有本站账号能进服',
+          playerCount: '{count} 名玩家',
+          sourceMissing: '来源未配置',
+          confirmRemoveSource: '移除 {name}？其 {count} 名玩家的记录会一并删除，角色名随之释放。',
+          sourceAdded: '已添加',
+          sourceRemoved: '已移除',
+          bridgedHeading: '外部玩家',
+          noBridged: '还没有外部玩家进过服',
+          lastSeen: '{date} 最后登录',
+          release: '释放角色名',
+          confirmRelease: '释放角色名 {name}？释放后任何人都可以占用。',
+          bridgedReleased: '角色名已释放',
         },
       };
 
@@ -498,6 +578,12 @@
       const t = (key, params = {}) =>
         String(STRINGS[lang][key] ?? key).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? '');
 
+      const PLACEHOLDERS = {
+        'invite-note': 'inviteNotePlaceholder',
+        'source-label': 'sourceLabelPlaceholder',
+        'source-address': 'sourceAddressPlaceholder',
+      };
+
       function setLanguage(next) {
         lang = next;
         localStorage.setItem('ratatoskr-lang', next);
@@ -506,7 +592,7 @@
         for (const el of document.querySelectorAll('[data-i18n]')) {
           el.textContent = t(el.dataset.i18n);
         }
-        $('invite-note').placeholder = t('inviteNotePlaceholder');
+        for (const [id, key] of Object.entries(PLACEHOLDERS)) $(id).placeholder = t(key);
         render();
       }
 
@@ -569,10 +655,13 @@
       async function render() {
         const current = session.get();
         $('auth').hidden = !!current;
-        $('account').hidden = !current;
+        $('dash').hidden = !current;
+        $('logout').hidden = !current;
+        $('whoami').hidden = !current;
         await renderAdmin();
         if (!current) return;
 
+        $('whoami').textContent = current.profile.name;
         $('profile-name').textContent = current.profile.name;
         $('profile-id').textContent = current.profile.id;
         $('yggdrasil-url').textContent = YGGDRASIL;
@@ -631,6 +720,7 @@
             profile: data.selectedProfile,
           });
           event.target.reset();
+          note($('auth-note'), '', '');
           await render();
         } catch (error) {
           note($('auth-note'), error.message, 'error');
@@ -654,6 +744,7 @@
             profile: data.selectedProfile,
           });
           event.target.reset();
+          note($('auth-note'), '', '');
           showPassword(t('yourPassword'), password);
           await render();
         } catch (error) {
@@ -728,7 +819,7 @@
 
       /* ---------- administration ----------
        * Shown only to an account the API answers /admin/state for. Hiding the
-       * section is a courtesy; the token check on the server is the real guard.
+       * column is a courtesy; the token check on the server is the real guard.
        */
 
       async function adminRequest(method, path, body) {
@@ -766,27 +857,38 @@
         return el;
       }
 
+      /** A name on the first line, details below it; takes the row's free space. */
+      function details(title, tags, meta) {
+        const box = document.createElement('div');
+        box.className = 'grow';
+        const line = document.createElement('span');
+        line.append(Object.assign(document.createElement('strong'), { textContent: title, className: 'mono' }));
+        for (const tag of tags) line.append(' ', span(tag, 'tag'));
+        box.append(line);
+        if (meta) box.append(span(meta, 'muted'));
+        return box;
+      }
+
       function action(labelKey, onClick, className = 'secondary') {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = className;
+        button.className = `${className} sm`;
         button.textContent = t(labelKey);
         button.addEventListener('click', onClick);
         return button;
       }
 
-      function empty(key) {
+      function listItem(className, text) {
         const li = document.createElement('li');
-        li.className = 'empty';
-        li.textContent = t(key);
+        li.className = className;
+        li.textContent = text;
         return li;
       }
 
       async function renderAdmin() {
         const state = await adminRequest('GET', '/state').catch(() => null);
         $('admin').hidden = !state;
-        // Two columns only when there is a second column to show.
-        document.querySelector('main').classList.toggle('wide', !!state);
+        $('dash').classList.toggle('admin', !!state);
         if (!state) return;
 
         const invites = state.invites.map((invite) =>
@@ -806,30 +908,20 @@
                   }),
                   action('revoke', () =>
                     adminAction(() => adminRequest('DELETE', `/invites/${invite.code}`), 'inviteRevoked'),
-                  ),
+                  'danger'),
                 ]),
           ),
         );
-        $('invite-list').replaceChildren(...(invites.length ? invites : [empty('noInvites')]));
+        $('invite-list').replaceChildren(...(invites.length ? invites : [listItem('empty', t('noInvites'))]));
 
         const accounts = state.accounts.map((account) => {
-          const details = document.createElement('div');
-          details.className = 'grow';
-          const name = document.createElement('p');
-          name.append(Object.assign(document.createElement('strong'), {
-            textContent: account.profile_name ?? '—',
-            className: 'mono',
-          }));
-          if (account.is_admin) name.append(' ', span(t('adminTag'), 'tag'));
-          const meta = span(
-            `${account.email} · ${t('registered', { date: day(account.created_at) })}`,
-            'muted',
-          );
-          details.append(name, meta);
-
           const label = account.profile_name ?? account.email;
           return row(
-            details,
+            details(
+              account.profile_name ?? '—',
+              account.is_admin ? [t('adminTag')] : [],
+              `${account.email} · ${t('registered', { date: day(account.created_at) })}`,
+            ),
             action('resetPassword', async () => {
               if (!confirm(t('confirmReset', { name: label }))) return;
               await adminAction(async () => {
@@ -850,31 +942,55 @@
                       () => adminRequest('DELETE', `/accounts/${account.id}`),
                       'accountDeleted',
                     );
-                  }),
+                  }, 'danger'),
                 ]),
           );
         });
-        $('account-list').replaceChildren(...(accounts.length ? accounts : [empty('noAccounts')]));
+        $('account-list').replaceChildren(...(accounts.length ? accounts : [listItem('empty', t('noAccounts'))]));
 
-        const bridged = state.bridged ?? [];
-        $('bridged').hidden = bridged.length === 0;
-        $('bridged-list').replaceChildren(
-          ...bridged.map((player) => {
-            const details = document.createElement('div');
-            details.className = 'grow';
-            const name = document.createElement('p');
-            name.append(
-              Object.assign(document.createElement('strong'), {
-                textContent: player.name,
-                className: 'mono',
-              }),
-              ' ',
-              span(player.source, 'tag'),
-            );
-            details.append(name, span(t('lastSeen', { date: day(player.last_seen) }), 'muted'));
+        renderBridge(state.upstreams ?? [], state.bridged ?? []);
+      }
 
-            return row(
-              details,
+      const sourceName = (label) => (label === 'mojang' ? t('sourceKindMojang') : label);
+
+      function renderBridge(upstreams, bridged) {
+        const bySource = new Map(upstreams.map((u) => [u.label, []]));
+        for (const player of bridged) {
+          if (!bySource.has(player.source)) bySource.set(player.source, []);
+          bySource.get(player.source).push(player);
+        }
+
+        const sources = upstreams.map((upstream) => {
+          const count = bySource.get(upstream.label).length;
+          return row(
+            details(
+              sourceName(upstream.label),
+              [t('playerCount', { count })],
+              upstream.api_root ?? 'sessionserver.mojang.com',
+            ),
+            action('removeSource', async () => {
+              if (!confirm(t('confirmRemoveSource', { name: sourceName(upstream.label), count }))) return;
+              await adminAction(
+                () => adminRequest('DELETE', `/upstreams/${encodeURIComponent(upstream.label)}`),
+                'sourceRemoved',
+              );
+            }, 'danger'),
+          );
+        });
+        $('source-list').replaceChildren(...(sources.length ? sources : [listItem('empty', t('noSources'))]));
+
+        // Players grouped under the service that vouched for them. A source that
+        // is not configured cannot let its players in, but their names stay held
+        // until released, so they are still listed.
+        const configured = new Set(upstreams.map((u) => u.label));
+        const players = [];
+        for (const [source, group] of bySource) {
+          if (group.length === 0) continue;
+          const missing = configured.has(source) ? '' : ` · ${t('sourceMissing')}`;
+          players.push(listItem('group', `${sourceName(source)} · ${group.length}${missing}`));
+          for (const player of group) {
+            players.push(row(
+              details(player.name, [], t('lastSeen', { date: day(player.last_seen) })),
               action('release', async () => {
                 if (!confirm(t('confirmRelease', { name: player.name }))) return;
                 await adminAction(
@@ -882,9 +998,10 @@
                   'bridgedReleased',
                 );
               }),
-            );
-          }),
-        );
+            ));
+          }
+        }
+        $('bridged-list').replaceChildren(...(players.length ? players : [listItem('empty', t('noBridged'))]));
       }
 
       /** Runs an admin mutation, reports it, and redraws the lists. */
@@ -905,6 +1022,30 @@
           await adminRequest('POST', '/invites', inviteNote ? { note: inviteNote } : {});
           $('invite-note').value = '';
         }, 'inviteIssued');
+      });
+
+      // Mojang needs neither a label nor an address: there is only one of it.
+      function syncSourceKind() {
+        const mojang = $('source-kind').value === 'mojang';
+        $('source-label').hidden = mojang;
+        $('source-address').hidden = mojang;
+        $('source-label').required = !mojang;
+        $('source-address').required = !mojang;
+      }
+      $('source-kind').addEventListener('change', syncSourceKind);
+      syncSourceKind();
+
+      $('source-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const mojang = $('source-kind').value === 'mojang';
+        const body = mojang
+          ? { label: 'mojang' }
+          : { label: $('source-label').value.trim(), apiRoot: $('source-address').value.trim() };
+        adminAction(async () => {
+          await adminRequest('POST', '/upstreams', body);
+          $('source-label').value = '';
+          $('source-address').value = '';
+        }, 'sourceAdded');
       });
 
       setLanguage(lang);
