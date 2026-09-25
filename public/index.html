@@ -228,7 +228,12 @@
           <h2 id="auth-title" data-i18n="signIn"></h2>
         </div>
 
-        <form id="login-form" class="card-body">
+        <!-- Safari only offers to save a password when a form really submits.
+             Signing in happens over fetch, so once it succeeds the form is
+             submitted again into this frame, which the server answers with an
+             empty page. The page itself never navigates. -->
+        <iframe name="login-sink" hidden></iframe>
+        <form id="login-form" class="card-body" method="post" action="/login" target="login-sink">
           <label class="field">
             <span data-i18n="emailOrCharacter"></span>
             <input type="text" name="username" autocomplete="username" required />
@@ -719,6 +724,9 @@
             clientToken: data.clientToken,
             profile: data.selectedProfile,
           });
+          // submit() skips the submit event, so this does not loop. The field
+          // values are captured synchronously, so resetting right after is safe.
+          event.target.submit();
           event.target.reset();
           note($('auth-note'), '', '');
           await render();

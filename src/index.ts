@@ -59,6 +59,13 @@ app.route(`${YGGDRASIL_PREFIX}/api`, api);
 app.route('/api', account);
 app.route('/api/admin', admin);
 
+/**
+ * Where the web UI's login form lands after a successful sign-in, so that
+ * browsers see a real form submission and offer to save the password. The
+ * sign-in itself already happened over the Yggdrasil API; the body is ignored.
+ */
+app.post('/login', (c) => c.html(''));
+
 /** Content-addressed textures. The hash is the content, so cache forever. */
 app.get('/textures/:hash', async (c) => {
   const hash = c.req.param('hash');
